@@ -1,0 +1,399 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) YEAR THE PACKAGE'S COPYRIGHT HOLDER
+# This file is distributed under the same license as the PACKAGE package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: PACKAGE VERSION\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2021-09-28 13:56-0400\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"Language: \n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+msgid "Welcome to PremierLeague"
+msgstr "Bienvenido a la premier league"
+
+msgid ",, The last result was {} and the next match is {},, "
+msgstr ",,el último resultado fue {} y el siguiente juego es {},, "
+
+msgid " press a button or scroll to see more options"
+msgstr "presione un botón o desplácese para ver más opciones"
+
+msgid " Say get table, or say a team name "
+msgstr " Di conseguir mesa o di el nombre de un equipo "
+
+msgid "Say get table, a team name or nickname, red cards, yellow cards, clean sheets, golden boot, fixtures, results, relegation, referees, stadiums by name, touches, fouls and tackles"
+msgstr ""
+
+msgid "Okay, hope to see you next time!"
+msgstr "Bien, ¡espero verte la próxima vez!"
+
+msgid "Sorry, I did not understand, you can ask for help to get a list of things to ask me"
+msgstr "Lo siento, no entendí, puedes pedir ayuda para obtener una lista de cosas para preguntarme"
+
+msgid "What can I help you with?"
+msgstr "¿En qué te puedo ayudar?"
+
+msgid "Sorry, we did not understand, can you try again?"
+msgstr "Lo sentimos, no lo entendemos, ¿puedes intentarlo de nuevo?"
+
+msgid "Say get table, or say a team name "
+msgstr "Digamos get table o di un nombre de equipo"
+
+msgid "Ask about the table or a team"
+msgstr "Pregunte por la mesa o un equipo"
+
+msgid "What can we tell you about Premier League  "
+msgstr "¿Qué podemos decirte sobre la Premier League?"
+
+msgid "We can tell you about teams or the table"
+msgstr "Podemos hablarte de equipos o de la tabla"
+
+msgid "the players with the most goals are,"
+msgstr "Los máximos goleadores son,"
+
+msgid "the highest scorers are, "
+msgstr "Los máximos goleadores son,"
+
+msgid "the top scorers are"
+msgstr "Los máximos goleadores son"
+
+msgid ", with "
+msgstr ", con "
+
+msgid " has "
+msgstr " tiene "
+
+msgid "We recognize the following team names"
+msgstr "Reconocemos los siguientes nombres de equipo"
+
+msgid "These are the teams in the best league in the world"
+msgstr "Estos son los equipos de la mejor liga del mundo"
+
+msgid "The best teams are"
+msgstr "Los mejores equipos son"
+
+msgid "You can also refer to teams by their nicknames like gunners or toffees"
+msgstr "También puedes referirte a los equipos por sus apodos como gunners o toffees"
+
+msgid "the goalkeepers with the most clean sheets are,"
+msgstr "los porteros con más hojas limpias son,"
+
+msgid "the most clean sheets go to, "
+msgstr "las hojas más limpias van a,"
+
+msgid "the keepers with the most clean sheets are"
+msgstr "los cuidadores con más sábanas limpias son"
+
+msgid "the players with the most fouls are,"
+msgstr "los jugadores con más faltas son,"
+
+msgid "the most fouls were committed by, "
+msgstr "la mayoría de las faltas fueron cometidas por,"
+
+msgid "the top foulers were,"
+msgstr "los mejores foulers fueron"
+
+msgid "Premier League"
+msgstr "Liga Premier"
+
+msgid "the players with the most yellow cards are,"
+msgstr "Los jugadores con más tarjetas amarillas son,"
+
+msgid "the most cautioned players are, "
+msgstr "Los jugadores más advertidos son,"
+
+msgid "the most booked players are,"
+msgstr "Los jugadores más reservados son,"
+
+msgid "the players with the most red cards are,"
+msgstr "Los jugadores con más tarjetas rojas son,"
+
+msgid "the most ejected players are, "
+msgstr "Los jugadores más expulsados son, "
+
+msgid "the players leaving their teams playing short the most are, "
+msgstr "los jugadores que dejan a sus equipos jugando más cortos son,"
+
+msgid "the players with the most touches are,"
+msgstr "los jugadores con más toques son,"
+
+msgid "the players touching the ball the most are, "
+msgstr "los jugadores que más tocan la pelota son"
+
+msgid "the most touches go to, "
+msgstr "a los más toques van,"
+
+msgid "the players with the most tackles are,"
+msgstr "los jugadores con más tackles son,"
+
+msgid "the players tackling the most are, "
+msgstr "los jugadores que más se enfrentan son,"
+
+msgid "the most tackles go to, "
+msgstr "la mayoría de los tackles van a,"
+
+msgid "the most used referees are, "
+msgstr "los árbitros más utilizados son,"
+
+msgid "the referees who've called the most games are, "
+msgstr "los árbitros que más partidos han convocado son,"
+
+msgid "the referees in charge of the most games are,  "
+msgstr "los árbitros a cargo de la mayoría de los juegos son,"
+
+msgid " yellow cards and "
+msgstr "tarjetas amarillas y"
+
+msgid " red cards"
+msgstr "la tarjeta roja"
+
+msgid "the results for the recent match week were, "
+msgstr "los resultados de la reciente semana de partidos fueron,"
+
+msgid "last weeks results were "
+msgstr "los resultados de las últimas semanas fueron"
+
+msgid "last week saw  "
+msgstr "la semana pasada vi"
+
+msgid "Would you like to hear more?"
+msgstr "¿Te gustaría escuchar más?"
+
+msgid "the fixtures for the current upcoming match week are,"
+msgstr "los partidos para la próxima semana de partidos actual son,"
+
+msgid "next week we'll see"
+msgstr "la próxima semana veremos"
+
+msgid "the next games are,"
+msgstr "los próximos juegos son,"
+
+msgid " versus "
+msgstr " versus "
+
+msgid " at "
+msgstr " at "
+
+msgid "The first five teams in the table are "
+msgstr "Los primeros cinco equipos de la tabla son"
+
+msgid "in the relegation zone "
+msgstr "en la zona de descenso"
+
+msgid "facing relegation"
+msgstr "afrontando el descenso"
+
+msgid "in danger "
+msgstr "en peligro "
+
+msgid "the teams currently "
+msgstr "los equipos actualmente "
+
+msgid " are "
+msgstr " are "
+
+msgid "You asked about "
+msgstr "Preguntaste por "
+
+msgid ", their form is "
+msgstr ", su forma es"
+
+msgid ", you can also ask for fixtures or results for {}"
+msgstr ", también puede solicitar accesorios o resultados para {}"
+
+msgid "Sorry, I could not find that team, please say a premier league team"
+msgstr "Lo siento, no pude encontrar ese equipo, por favor diga un equipo de la Premier League"
+
+msgid "Please try again"
+msgstr "por favor, vuelve a intentarlo"
+
+msgid "could not find team"
+msgstr "No se pudo encontrar el equipo"
+
+msgid "could not find team with that name, please try again or ask us for a list of team names"
+msgstr "No se pudo encontrar el equipo con ese nombre, inténtelo de nuevo o pídanos una lista de nombres de equipo"
+
+msgid " with "
+msgstr " con "
+
+msgid ". you can also ask about touches"
+msgstr ". también puedes preguntar por los toques"
+
+msgid ". you can also ask about fouls"
+msgstr ". también puedes preguntar por las faltas"
+
+msgid ". you can also ask about tackles"
+msgstr ". you can also ask about tackles"
+
+msgid ". you can also ask about Premier League stadiums by name"
+msgstr ". también puede preguntar sobre los estadios de la Premier League por su nombre"
+
+msgid ". you can also ask about referees"
+msgstr ". también puedes preguntar por los árbitros"
+
+msgid ". you can also ask about fixtures"
+msgstr ". también puede preguntar sobre accesorios"
+
+msgid ". you can also ask about last weeks results"
+msgstr ". también puede preguntar sobre los resultados de las últimas semanas"
+
+msgid ". you can also ask about fixtures for a team"
+msgstr ". también puede preguntar sobre los partidos de un equipo"
+
+msgid ". you can also ask about results for a team"
+msgstr ". También puede preguntar sobre los resultados de un equipo"
+
+msgid ". you can also ask about relegation"
+msgstr ". también puedes preguntar sobre el descenso"
+
+msgid ". you can also say red cards"
+msgstr ". también puedes decir tarjetas rojas"
+
+msgid ". you can also say yellow card"
+msgstr ". también puedes decir tarjeta amarilla"
+
+msgid ". you can also ask about clean sheets"
+msgstr ". también puede preguntar sobre mantener la portería imbatida"
+
+msgid ". you can also ask about goals"
+msgstr ". también puede preguntar sobre gols"
+
+msgid " that is the end of the list. "
+msgstr "ese es el final de la lista."
+
+msgid "recent results for {} were"
+msgstr "los resultados recientes de {} fueron"
+
+msgid "upcoming fixtures for {} are"
+msgstr "encuentras futuras para {} estan"
+
+msgid "press a button"
+msgstr "presione un botón"
+
+msgid "Here are the goal differences, press Back to return"
+msgstr "Aquí están las diferencias de goles, pulse Atrás para volver"
+
+msgid "Here are Keeper saves versus goals, press Back to return"
+msgstr "Aquí están los guardados de Keeper frente a los goles, presione Atrás para regresar"
+
+msgid "Team points by week, say add or remove team"
+msgstr "Puntos de equipo por semana, por ejemplo, agregar o eliminar equipo"
+
+msgid "Welcome to Premier League, press a button or scroll to see more options"
+msgstr "Puntos de equipo por semana, por ejemplo, agregar o eliminar equipo"
+
+msgid "This device does not have a screen, what can we help you with"
+msgstr "Este dispositivo no tiene pantalla, con qué podemos ayudarte"
+
+msgid "what can we help you with"
+msgstr "con qué podemos ayudarle"
+
+msgid "Sorry, adding or removing teams for the graph is only supported on devices with screens."
+msgstr "Lo sentimos, agregar o eliminar equipos para el gráfico solo se admite en dispositivos con pantallas."
+
+msgid " What can we tell you about premier league?"
+msgstr "¿Qué te podemos contar de la Premier League?"
+
+msgid "Goal Differences"
+msgstr "Diferencia de goles"
+
+msgid "Team Points By Week"
+msgstr "Puntos de equipo por semana"
+
+msgid "Goals Allowed"
+msgstr "El portero salva vs. Goles"
+
+msgid "Keeper Saves vs. Goals"
+msgstr "El portero salva vs. Goles"
+
+msgid "Here is the page of just teams"
+msgstr "Aquí está la página de solo equipos"
+
+msgid "wins"
+msgstr "gana"
+
+msgid "draws"
+msgstr "el empate"
+
+msgid "losses"
+msgstr "la derrota"
+
+msgid "goals scored"
+msgstr "goals"
+
+msgid "goals allowed"
+msgstr "goles permitidos"
+
+msgid " for a goal difference of "
+msgstr " para una diferencia de goles de "
+
+msgid " draw"
+msgstr " el empate"
+
+msgid " loss"
+msgstr " derrota"
+
+msgid " and"
+msgstr " y"
+
+msgid " point"
+msgstr "el punto"
+
+msgid " scored, "
+msgstr " tanto"
+
+msgid " allowed, "
+msgstr " permitido"
+
+msgid "first place"
+msgstr "el primer lugar"
+
+msgid "second place"
+msgstr "el segundo lugar"
+
+msgid "third place"
+msgstr "el tercer lugar"
+
+msgid "th place"
+msgstr "lugar"
+
+msgid "Back"
+msgstr "el fondo"
+
+msgid "You can ask about each team"
+msgstr "Puedes preguntar por cada equipo"
+
+msgid "The next five teams in the table are "
+msgstr "Los siguientes cinco equipos en la tabla son"
+
+msgid "The last five teams in the table are "
+msgstr "Los últimos cinco equipos de la tabla son"
+
+msgid "The next five fixtures are"
+msgstr "Los próximos cinco partidos son"
+
+msgid "The next five results were"
+msgstr "Los siguientes cinco resultados fueron"
+
+msgid "Saves"
+msgstr "Para"
+
+msgid  "ShowTeamForm"
+msgstr "mostrar formulario de equipo"
+
+msgid  "ShowTeamResults"
+msgstr "mostrar resultados del equipo"
+
+msgid  "ShowTeamFixtures"
+msgstr "mostrar juegos de equipo"
+
+msgid "Ok, we'll show you team {}"
+msgstr "Ok, te mostraremos el equipo {}"
