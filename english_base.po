@@ -1,0 +1,318 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) YEAR THE PACKAGE'S COPYRIGHT HOLDER
+# This file is distributed under the same license as the PACKAGE package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: PACKAGE VERSION\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2021-09-28 13:56-0400\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"Language: \n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+msgid "Welcome to PremierLeague"
+msgstr ""
+
+msgid ",, The last result was {} and the next match is {},, "
+msgstr ""
+
+msgid " press a button or scroll to see more options"
+msgstr ""
+
+msgid " Say get table, or say a team name "
+msgstr ""
+
+msgid "Say get table, a team name or nickname, red cards, yellow cards, clean sheets, golden boot, fixtures, results, relegation, referees, stadiums by name, touches, fouls and tackles"
+msgstr ""
+
+msgid "Okay, hope to see you next time!"
+msgstr ""
+
+msgid "Sorry, I did not understand, you can ask for help to get a list of things to ask me"
+msgstr ""
+
+msgid "What can I help you with?"
+msgstr ""
+
+msgid "Sorry, we did not understand, can you try again?"
+msgstr ""
+
+msgid "Say get table, or say a team name "
+msgstr ""
+
+msgid "Ask about the table or a team"
+msgstr ""
+
+msgid "What can we tell you about Premier League  "
+msgstr ""
+
+msgid "We can tell you about teams or the table"
+msgstr ""
+
+msgid "the players with the most goals are,"
+msgstr ""
+
+msgid "the highest scorers are, "
+msgstr ""
+
+msgid "the top scorers are"
+msgstr ""
+
+msgid ", with "
+msgstr ""
+
+msgid " has "
+msgstr ""
+
+msgid "We recognize the following team names"
+msgstr ""
+
+msgid "These are the teams in the best league in the world"
+msgstr ""
+
+msgid "The best teams are"
+msgstr ""
+
+msgid "You can also refer to teams by their nicknames like gunners or toffees"
+msgstr ""
+
+msgid "the goalkeepers with the most clean sheets are,"
+msgstr ""
+
+msgid "the most clean sheets go to, "
+msgstr ""
+
+msgid "the keepers with the most clean sheets are"
+msgstr ""
+
+msgid "the players with the most fouls are,"
+msgstr ""
+
+msgid "the most fouls were committed by, "
+msgstr ""
+
+msgid "the top foulers were,"
+msgstr ""
+
+msgid "Premier League"
+msgstr ""
+
+msgid "the players with the most yellow cards are,"
+msgstr ""
+
+msgid "the most cautioned players are, "
+msgstr ""
+
+msgid "the most booked players are,"
+msgstr ""
+
+msgid "the players with the most red cards are,"
+msgstr ""
+
+msgid "the most ejected players are, "
+msgstr ""
+
+msgid "the players leaving their teams playing short the most are, "
+msgstr ""
+
+msgid "the players with the most touches are,"
+msgstr ""
+
+msgid "the players touching the ball the most are, "
+msgstr ""
+
+msgid "the most touches go to, "
+msgstr ""
+
+msgid "the players with the most tackles are,"
+msgstr ""
+
+msgid "the players tackling the most are, "
+msgstr ""
+
+msgid "the most tackles go to, "
+msgstr ""
+
+msgid "the most used referees are, "
+msgstr ""
+
+msgid "the referees who've called the most games are, "
+msgstr ""
+
+msgid "the referees in charge of the most games are,  "
+msgstr ""
+
+msgid " yellow cards and "
+msgstr ""
+
+msgid " red cards"
+msgstr ""
+
+msgid "the results for the recent match week were, "
+msgstr ""
+
+msgid "last weeks results were "
+msgstr ""
+
+msgid "last week saw  "
+msgstr ""
+
+msgid " Would you like to hear more?"
+msgstr ""
+
+msgid "the fixtures for the current upcoming match week are,"
+msgstr ""
+
+msgid "next week we'll see"
+msgstr ""
+
+msgid "the next games are,"
+msgstr ""
+
+msgid " versus "
+msgstr ""
+
+msgid " at "
+msgstr ""
+
+msgid "The first five teams in the table are "
+msgstr ""
+
+msgid "in the relegation zone "
+msgstr ""
+
+msgid "facing relegation"
+msgstr ""
+
+msgid "in danger "
+msgstr ""
+
+msgid "the teams currently "
+msgstr ""
+
+msgid " are "
+msgstr ""
+
+msgid "You asked about "
+msgstr ""
+
+msgid ", their form is "
+msgstr ""
+
+msgid ", you can also ask for fixtures or results for {}"
+msgstr ""
+
+msgid "Sorry, I could not find that team, please say a premier league team"
+msgstr ""
+
+msgid "Please try again"
+msgstr ""
+
+msgid "could not find team"
+msgstr ""
+
+msgid "could not find team with that name, please try again or ask us for a list of team names"
+msgstr ""
+
+msgid " with "
+msgstr ""
+
+msgid ". you can also ask about touches"
+msgstr ""
+
+msgid ". you can also ask about fouls"
+msgstr ""
+
+msgid ". you can also ask about tackles"
+msgstr ""
+
+msgid ". you can also ask about Premier League stadiums by name"
+msgstr ""
+
+msgid ". you can also ask about referees"
+msgstr ""
+
+msgid ". you can also ask about fixtures"
+msgstr ""
+
+msgid ". you can also ask about last weeks results"
+msgstr ""
+
+msgid ". you can also ask about fixtures for a team"
+msgstr ""
+
+msgid ". you can also ask about results for a team"
+msgstr ""
+
+msgid ". you can also ask about relegation"
+msgstr ""
+
+msgid ". you can also say red cards"
+msgstr ""
+
+msgid ". you can also say yellow card"
+msgstr ""
+
+msgid ". you can also ask about clean sheets"
+msgstr ""
+
+msgid ". you can also ask about goals"
+msgstr ""
+
+msgid " that is the end of the list. "
+msgstr ""
+
+msgid "recent results for {} were"
+msgstr ""
+
+msgid "upcoming fixtures for {} are"
+msgstr ""
+
+msgid "press a button"
+msgstr ""
+
+msgid "Here are the goal differences, press Back to return"
+msgstr ""
+
+msgid "Here are Keeper saves versus goals, press Back to return"
+msgstr ""
+
+msgid "Team points by week, say add or remove team"
+msgstr ""
+
+msgid "Welcome to Premier League, press a button or scroll to see more options"
+msgstr ""
+
+msgid "This device does not have a screen, what can we help you with"
+msgstr ""
+
+msgid "what can we help you with"
+msgstr ""
+
+msgid "Sorry, adding or removing teams for the graph is only supported on devices with screens."
+msgstr ""
+
+msgid " What can we tell you about premier league?"
+msgstr ""
+
+msgid "Goal Differences"
+msgstr ""
+
+msgid "Team Points By Week"
+msgstr ""
+
+msgid "Goals Allowed"
+msgstr ""
+
+msgid "Keeper Saves vs. Goals"
+msgstr ""
+
+msgid "Here is the page of just teams"
+msgstr ""
