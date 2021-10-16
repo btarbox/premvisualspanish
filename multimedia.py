@@ -5,6 +5,7 @@ from ask_sdk_core.dispatch_components import (
 from ask_sdk_core.utils import is_request_type, is_intent_name, get_intent_name, get_slot, get_slot_value, get_supported_interfaces
 from ask_sdk_core.handler_input import HandlerInput
 
+from ask_sdk_model.services.directive import (SendDirectiveRequest, Header, SpeakDirective)
 from ask_sdk_model.ui import SimpleCard, StandardCard, Image
 from ask_sdk_model import Response
 from ask_sdk_model.interfaces.alexa.presentation.apl import RenderDocumentDirective as APLRenderDocumentDirective
@@ -16,7 +17,7 @@ from statshandlers import goal_hander, cleansheets_handler, foul_handler, yellow
 from statshandlers import results_handler, fixtures_handler, table_handler, relegation_handler, team_handler,  team_results_or_fixtures, table_data, reload_main_table_as_needed
 from statshandlers import NAME_INDEX,GOAL_DIFF_INDEX, find_team_index,load_combined_stats, load_two_stats
 from shared import extra_cmd_prompts,  doc, noise, noise2, noise3, noise_max_millis 
-from shared import noise2_max_millis, noise3_max_millis, datasources2, datasourcessp, test_speach_data, noise_data, teamsdatasource
+from shared import noise2_max_millis, noise3_max_millis, datasources2, datasourcessp, test_speach_data, noise_data, teamsdatasource, foo_table
 from linechartdata import linedata
 import boto3
 from random import randrange
@@ -32,8 +33,223 @@ logger.setLevel(logging.DEBUG)
 TOKEN = "buttontoken"
 TICK_WIDTH = 3.0
 
+        
+class ButtonEventHandler(AbstractRequestHandler):
+    def can_handle(self, handler_input):
+        logger.info("at can handle ButtonEventHandler")
+        if is_request_type("Alexa.Presentation.APL.UserEvent")(handler_input):
+            user_event = handler_input.request_envelope.request
+            return True
+        else:
+            return False
+ 
+    def handle(self, handler_input):
+        _ = set_translation(handler_input)
+        logger.info("at ButtonEventHandler")
+        SELECTED_COLOR = "white"
+        UNSELECTED_COLOR = "grey"
+        
+        first_arg = handler_input.request_envelope.request.arguments[0]
+        logger.info(f"first_arg was {first_arg}")
+        
+        if first_arg == 'radioButtonText':
+            radio_button_id   = handler_input.request_envelope.request.arguments[1]['radioButtonId']
+            radio_button_text = handler_input.request_envelope.request.arguments[1]['radioButtonText']
+            logger.info(f"about to send an ExecuteCommands based on {handler_input.request_envelope.request.arguments[1]['radioButtonId']}")
+            buttons = ["Form","Results","Fixtures"]
+            texts   = [_("ShowTeamForm"),_("ShowTeamResults"),_("ShowTeamFixtures")]
+            button_commands = []
+            
+            # for each button turn it on/off based on what was picked
+            for button, button_text in zip(buttons,texts):  
+                value = SELECTED_COLOR if handler_input.request_envelope.request.arguments[1]['radioButtonId'] == button else UNSELECTED_COLOR
+                set_value_command = SetValueCommand(component_id=button,object_property="radioButtonColor",value=value)
+                button_commands.append(set_value_command)
+                
+                logger.info(f"setting {button_text} to {value}")
+                set_value_command = SetValueCommand(component_id=button_text,object_property="color",value=value)
+                button_commands.append(set_value_command)
+
+                value = True if handler_input.request_envelope.request.arguments[1]['radioButtonId'] == button else False
+                if value == True:
+                    # remember what button was selected for the next event
+                    session_attr = handler_input.attributes_manager.session_attributes
+                    session_attr["radioButtonText"] = handler_input.request_envelope.request.arguments[1]['radioButtonId']
+                    handler_input.attributes_manager.session_attributes = session_attr
+
+                set_value_command = SetValueCommand(component_id=button,object_property="checked",value=value)
+                button_commands.append(set_value_command)
+            return (handler_input.response_builder.speak(wrap_language(handler_input, _("Ok, we'll show you team {}")).format(radio_button_id)).add_directive(ExecuteCommandsDirective(token=TOKEN,commands=button_commands)).response)
+        
+        if first_arg == "goaldifference":
+            return(goaldifference(handler_input))
+
+        if first_arg == "savepercent":
+            return(savepercent(handler_input))
+            
+        if first_arg == "goals_shots":
+            return(goals_shots(handler_input))
+            
+ 
+        if first_arg == "line":
+            #return(load_and_output_graph(handler_input, linedata))
+            return(do_line_graph(handler_input))
+
+        if first_arg == "goBack":
+            return(go_home(handler_input))
+        if first_arg == "table":
+            return(table(handler_input))
+        
+        if first_arg == "Leave a Review":
+            handler_input.response_builder.speak("Scan this QR code with your phone to leave us a review, thank you!").ask(HELP_REPROMPT)
+            return handler_input.response_builder.response
+            
+        if first_arg == "referee":
+            if get_supported_interfaces(handler_input).alexa_presentation_apl is not None:
+                return yellow_red(handler_input)
+
+            
+        if first_arg == "teams":
+            this_profile = str(get_viewport_profile(handler_input.request_envelope))
+            item_heights = {"ViewportProfile.HUB_LANDSCAPE_SMALL": "75%", "ViewportProfile.HUB_LANDSCAPE_MEDIUM": "65%", "ViewportProfile.HUB_LANDSCAPE_LARGE": "55%"}
+            this_height = item_heights.get(this_profile, "")
+            teamsdatasource["gridListData"]["listItemHeight"] = this_height
+            teamsdatasource["gridListData"]["title"] = _("You can ask about each team")
+            teamsdatasource["radioButtonExampleData"]["radioButtonGroupItems"][0]["radioButtonText"] = _("ShowTeamForm")
+            teamsdatasource["radioButtonExampleData"]["radioButtonGroupItems"][1]["radioButtonText"] = _("ShowTeamResults")
+            teamsdatasource["radioButtonExampleData"]["radioButtonGroupItems"][2]["radioButtonText"] = _("ShowTeamFixtures")
+            logger.info("teamsdatasource")
+            logger.info(str(teamsdatasource))
+            return (
+                handler_input.response_builder
+                    .speak(wrap_language(handler_input, _("Here is the page of just teams")))
+                    .set_should_end_session(False)          
+                    .add_directive( 
+                      APLRenderDocumentDirective(
+                        token= TOKEN,
+                        document = {
+                            "type" : "Link",
+                            "token" : TOKEN,
+                            "src"  : "doc://alexa/apl/documents/RadioButtons"
+                        },
+                        datasources = teamsdatasource 
+                      )
+                    ).response
+                )
+            
+        session_attr = handler_input.attributes_manager.session_attributes
+
+        # if we get here it was an actual button press so we should say something
+
+        vector_table = {"goals"      : goal_hander, 
+                        "cleansheet" : cleansheets_handler, 
+                        "fouls"      : foul_handler, 
+                        "yellowcard" : yellowcard_handler,
+                        "redcard"    : redcard_handler,
+                        "touches"    : touches_handler,
+                        "tackles"    : tackles_handler,
+                        "referee"    : referees_handler,
+                        "results"    : results_handler,
+                        "fixtures"   : fixtures_handler,
+                        "table"      : table_handler,
+                        "relegation" : relegation_handler
+        }
+        logger.info(f"the button that was pressed was {first_arg}")
+        if first_arg in vector_table:
+            return vector_table.get(first_arg)(handler_input)
+        else:
+            verb = session_attr.get("radioButtonText", "")
+            logger.info(f"the verb when a team button was pressed was {verb}")
+            if verb == "Fixtures":
+                return team_results_or_fixtures(handler_input, first_arg, "fixtures2")
+            elif verb == "Results":
+                return team_results_or_fixtures(handler_input, first_arg, "prevWeekFixtures")
+            else:
+                return(team_handler(handler_input, first_arg))
+
+def go_home(handler_input):
+    _ = set_translation(handler_input)
+    if get_supported_interfaces(handler_input).alexa_presentation_apl is not None:
+        return (
+            handler_input.response_builder
+                .speak(wrap_language(handler_input, _("Welcome to Premier League, press a button or scroll to see more options")))
+                .set_should_end_session(False)          
+                .add_directive( 
+                  APLRenderDocumentDirective(
+                    token= "developer-provided-string",
+                    document = {
+                        "type" : "Link",
+                        "token" : "my token",
+                        "src"  : "doc://alexa/apl/documents/GridList"
+                    },
+                    datasources = datasourcessp if is_spanish(handler_input) else datasources2 
+                  )
+                ).response
+            )
+    else:
+        return(handler_input.response_builder.speak(_("This device does not have a screen, what can we help you with")).ask(_("what can we help you with")).response)
+
+def table(handler_input):
+    _ = set_translation(handler_input)
+    get_progressive_response(handler_input)
+    response = boto3.client("cloudwatch").put_metric_data(
+        Namespace='PremierLeague',
+        MetricData=[{'MetricName': 'InvocationsWithScreen','Timestamp': datetime.now(),'Value': 1,},]
+    )
+    reload_main_table_as_needed()
+
+    try:
+        logger.info(str(short_names))
+        for index in range(0, 20):
+            foo_table["dataTable"]["properties"]["rows"][index][0] = str(index)
+            logger.info(f"name:{table_data[index][0].strip()}. short_name {short_names.get(table_data[index][0].strip())}")
+            
+            foo_table["dataTable"]["properties"]["rows"][index][1] = short_names.get(table_data[index][0].strip(),  table_data[index][0])
+            foo_table["dataTable"]["properties"]["rows"][index][2] = str(table_data[index][1])
+            foo_table["dataTable"]["properties"]["rows"][index][3] = str(table_data[index][2])
+            logger.info("2")
+            foo_table["dataTable"]["properties"]["rows"][index][4] = str(table_data[index][3])
+            foo_table["dataTable"]["properties"]["rows"][index][5] = str(table_data[index][4])
+            foo_table["dataTable"]["properties"]["rows"][index][6] = str(table_data[index][5])
+            foo_table["dataTable"]["properties"]["rows"][index][7] = str(table_data[index][6])
+            foo_table["dataTable"]["properties"]["rows"][index][8] = str(table_data[index][7])
+            foo_table["dataTable"]["properties"]["rows"][index][9] = str(table_data[index][8])
+    except Exception as ex:
+        logger.info("hit exception")
+        logger.error(ex)        
+
+    logger.info(str(foo_table))
+    return (
+        handler_input.response_builder
+            .speak(wrap_language(handler_input, _("Here is the table, press Back to return")))
+            .set_should_end_session(False)          
+            .add_directive( 
+              APLRenderDocumentDirective(
+                token = "developer-provided-string",
+                    document = {
+                        "type" : "Link",
+                        "src"  : "doc://alexa/apl/documents/table"
+                    },
+                    datasources = foo_table 
+              )
+            ).response
+        )
+
+def get_progressive_response(handler_input):
+    try:
+        request_id_holder = handler_input.request_envelope.request.request_id
+        directive_header = Header(request_id=request_id_holder)
+        speech = SpeakDirective(speech="Getting the table")
+        directive_request = SendDirectiveRequest(header=directive_header, directive=speech)
+        directive_service_client = handler_input.service_client_factory.get_directive_service()
+        directive_service_client.enqueue(directive_request)
+    except Exception as ex:
+        logger.info("hit exception")
+        logger.error(ex)        
 
 
+
+                
 def goaldifference(handler_input):
     _ = set_translation(handler_input)
     ds = get_goal_difference_url()
@@ -61,67 +277,7 @@ def goaldifference(handler_input):
               )
             ).response
         )
-    
-    
-def savepercent(handler_input):
-    _ = set_translation(handler_input)
-    ds = get_save_percent_url(handler_input)
-    response = boto3.client("cloudwatch").put_metric_data(
-        Namespace='PremierLeague',
-        MetricData=[{'MetricName': 'InvocationsWithScreen','Timestamp': datetime.now(),'Value': 1,},]
-    )
 
-    logger.info(ds)
-    return (
-        handler_input.response_builder
-            .speak(wrap_language(handler_input, _("Here are Keeper saves versus goals, press Back to return")))
-            .set_should_end_session(False)          
-            .add_directive( 
-              APLRenderDocumentDirective(
-                token= TOKEN,
-                document = {
-                    "type" : "Link",
-                    "token" : TOKEN,
-                    "src"  : "doc://alexa/apl/documents/GoalDifference"
-                },
-                #datasources = {"source": {"url": ds}}
-                datasources = {"source": {"url": ds, "back": _("Back")}}
-                    
-              )
-            ).response
-        )
-
-def goals_shots(handler_input):
-    logger.info("at goals_shots")
-    _ = set_translation(handler_input)
-    ds = get_goals_shots_url(handler_input)
-    logger.info(f"ds in goals_shots is {ds}")
-    response = boto3.client("cloudwatch").put_metric_data(
-        Namespace='PremierLeague',
-        MetricData=[{'MetricName': 'InvocationsWithScreen','Timestamp': datetime.now(),'Value': 1,},]
-    )
-
-    logger.info(ds)
-    return (
-        handler_input.response_builder
-            .speak(wrap_language(handler_input, _("Here are goals vs shots, press Back to return")))
-            .set_should_end_session(False)          
-            .add_directive( 
-              APLRenderDocumentDirective(
-                token= TOKEN,
-                document = {
-                    "type" : "Link",
-                    "token" : TOKEN,
-                    "src"  : "doc://alexa/apl/documents/GoalDifference"
-                },
-                datasources = {"source": {"url": ds, "back": _("Back")}}
-                    
-              )
-            ).response
-        )
-    
-    
-''' goal difference '''
 def get_goal_difference_url():
     qc = QuickChart()
     qc.width = 500
@@ -158,7 +314,197 @@ def get_goal_difference_url():
 
     ret_url = qc.get_short_url()
     return(ret_url)
+    
 
+def yellow_red(handler_input):
+    _ = set_translation(handler_input)
+    ds = get_save_percent_url(handler_input,_("Yellow Cards"), _("Red Cards"), _("Cards by Referees"), "yellow_red")
+    response = boto3.client("cloudwatch").put_metric_data(
+        Namespace='PremierLeague',
+        MetricData=[{'MetricName': 'InvocationsWithScreen','Timestamp': datetime.now(),'Value': 1,},]
+    )
+
+    logger.info(ds)
+    return (
+        handler_input.response_builder
+            .speak(wrap_language(handler_input, _("Here are red and yellow cards by referee, press Back to return")))
+            .set_should_end_session(False)          
+            .add_directive( 
+              APLRenderDocumentDirective(
+                token= TOKEN,
+                document = {
+                    "type" : "Link",
+                    "token" : TOKEN,
+                    "src"  : "doc://alexa/apl/documents/GoalDifference"
+                },
+                datasources = {"source": {"url": ds, "back": _("Back")}}
+                    
+              )
+            ).response
+        )
+
+
+    
+def savepercent(handler_input):
+    _ = set_translation(handler_input)
+    ds = get_save_percent_url(handler_input,_("Saves"), _("goals allowed"), _("Keeper Saves vs. Goals"), "savepercent")
+    response = boto3.client("cloudwatch").put_metric_data(
+        Namespace='PremierLeague',
+        MetricData=[{'MetricName': 'InvocationsWithScreen','Timestamp': datetime.now(),'Value': 1,},]
+    )
+
+    logger.info(ds)
+    return (
+        handler_input.response_builder
+            .speak(wrap_language(handler_input, _("Here are Keeper saves versus goals, press Back to return")))
+            .set_should_end_session(False)          
+            .add_directive( 
+              APLRenderDocumentDirective(
+                token= TOKEN,
+                document = {
+                    "type" : "Link",
+                    "token" : TOKEN,
+                    "src"  : "doc://alexa/apl/documents/GoalDifference"
+                },
+                datasources = {"source": {"url": ds, "back": _("Back")}}
+                    
+              )
+            ).response
+        )
+
+
+def get_save_percent_url(handler_input, label1, label2, title, filename):
+    _ = set_translation(handler_input)
+    qc = QuickChart()
+    qc.width = 500
+    qc.height = 300
+    if filename == "savepercent":
+        names, stat1, stat2 = load_combined_stats(5,"savepercent",1,2,4)
+    else:
+        names, stat1, stat2 = load_two_stats(5, "yellow_red")
+
+    dict = {
+        "type": "bar", 
+        "data": {
+            "labels": [], 
+                "datasets": [
+                    {
+                        "label": label1,
+                        "backgroundColor": 'rgb(75, 192, 192)',
+                        "stack": "Stack 0",
+                        "data":[]
+                    },
+                    {
+                        "label": label2,
+                        "backgroundColor": 'rgb(255,99,132)',
+                        "stack": "Stack 1",
+                        "data":[]
+                    }
+                ]
+        },
+        "options":{
+            "responsive": "true",
+            "title": {
+              "display": "true",
+              "text": title
+            },
+            "scales": {
+                "xAxes": [ { "stacked": "true"}],
+                "yAxes": [ { "stacked": "true"}],
+            }
+      }    
+    }
+    dict["data"]["labels"] = names
+    dict["data"]["datasets"][0]["data"] = stat2
+    dict["data"]["datasets"][1]["data"] = stat1
+    qc.config = str(dict)
+
+    ret_url = qc.get_short_url()
+    logger.info(f"the long url is {qc.get_url()}")
+    return(ret_url)
+
+
+def goals_shots(handler_input):
+    logger.info("at goals_shots")
+    _ = set_translation(handler_input)
+    ds = get_goals_shots_url(handler_input)
+    logger.info(f"ds in goals_shots is {ds}")
+    response = boto3.client("cloudwatch").put_metric_data(
+        Namespace='PremierLeague',
+        MetricData=[{'MetricName': 'InvocationsWithScreen','Timestamp': datetime.now(),'Value': 1,},]
+    )
+
+    logger.info(ds)
+    return (
+        handler_input.response_builder
+            .speak(wrap_language(handler_input, _("Here are goals vs shots, press Back to return")))
+            .set_should_end_session(False)          
+            .add_directive( 
+              APLRenderDocumentDirective(
+                token= TOKEN,
+                document = {
+                    "type" : "Link",
+                    "token" : TOKEN,
+                    "src"  : "doc://alexa/apl/documents/GoalDifference"
+                },
+                datasources = {"source": {"url": ds, "back": _("Back")}}
+                    
+              )
+            ).response
+        )
+    
+    
+''' goal difference '''
+
+
+def get_goals_shots_url(handler_input):
+    _ = set_translation(handler_input)
+    logger.info("at get_goals_shots_url")
+    qc = QuickChart()
+    qc.width = 500
+    qc.height = 300
+    names, goals, shots = load_two_stats(5,"goals_shots")
+    logger.info("after load_two_")
+    dict = {
+        "type": "bar", 
+        "data": {
+            "labels": [], 
+                "datasets": [
+                    {
+                        "label": _("Goals"),
+                        "backgroundColor": 'rgb(75, 192, 192)',
+                        "stack": "Stack 0",
+                        "data":[]
+                    },
+                    {
+                        "label":_("Shots"),
+                        "backgroundColor": 'rgb(255,99,132)',
+                        "stack": "Stack 1",
+                        "data":[]
+                    }
+                ]
+        },
+        "options":{
+            "responsive": "true",
+            "title": {
+              "display": "true",
+              "text": _("Goals vs Shots")
+            },
+            "scales": {
+                "xAxes": [ { "stacked": "true"}],
+                "yAxes": [ { "stacked": "true"}],
+            }
+      }    
+    }
+    logger.info("after set dict")
+    dict["data"]["labels"] = names
+    dict["data"]["datasets"][0]["data"] = goals
+    dict["data"]["datasets"][1]["data"] = shots
+    qc.config = str(dict)
+
+    ret_url = qc.get_short_url()
+    logger.info(f"the long url is {qc.get_url()}")
+    return(ret_url)
 
 def get_line_chart_url(session_attr, handler_input):
     _ = set_translation(handler_input)
@@ -298,256 +644,6 @@ def do_line_graph(handler_input):
             ).response
         )
 
-    
-
-def get_save_percent_url(handler_input):
-    _ = set_translation(handler_input)
-    qc = QuickChart()
-    qc.width = 500
-    qc.height = 300
-    names, goals, saves = load_combined_stats(5,"savepercent",1,2,4)
-
-    dict = {
-        "type": "bar", 
-        "data": {
-            "labels": [], 
-                "datasets": [
-                    {
-                        "label": _("Saves"),
-                        "backgroundColor": 'rgb(75, 192, 192)',
-                        "stack": "Stack 0",
-                        "data":[]
-                    },
-                    {
-                        "label":_("goals allowed"),
-                        "backgroundColor": 'rgb(255,99,132)',
-                        "stack": "Stack 1",
-                        "data":[]
-                    }
-                ]
-        },
-        "options":{
-            "responsive": "true",
-            "title": {
-              "display": "true",
-              "text": _("Keeper Saves vs. Goals")
-            },
-            "scales": {
-                "xAxes": [ { "stacked": "true"}],
-                "yAxes": [ { "stacked": "true"}],
-            }
-      }    
-    }
-    dict["data"]["labels"] = names
-    dict["data"]["datasets"][0]["data"] = saves
-    dict["data"]["datasets"][1]["data"] = goals
-    qc.config = str(dict)
-
-    ret_url = qc.get_short_url()
-    logger.info(f"the long url is {qc.get_url()}")
-    return(ret_url)
-
-
-def get_goals_shots_url(handler_input):
-    _ = set_translation(handler_input)
-    logger.info("at get_goals_shots_url")
-    qc = QuickChart()
-    qc.width = 500
-    qc.height = 300
-    names, goals, shots = load_two_stats(5,"goals_shots")
-    logger.info("after load_two_")
-    dict = {
-        "type": "bar", 
-        "data": {
-            "labels": [], 
-                "datasets": [
-                    {
-                        "label": _("Goals"),
-                        "backgroundColor": 'rgb(75, 192, 192)',
-                        "stack": "Stack 0",
-                        "data":[]
-                    },
-                    {
-                        "label":_("Shots"),
-                        "backgroundColor": 'rgb(255,99,132)',
-                        "stack": "Stack 1",
-                        "data":[]
-                    }
-                ]
-        },
-        "options":{
-            "responsive": "true",
-            "title": {
-              "display": "true",
-              "text": _("Goals vs Shots")
-            },
-            "scales": {
-                "xAxes": [ { "stacked": "true"}],
-                "yAxes": [ { "stacked": "true"}],
-            }
-      }    
-    }
-    logger.info("after set dict")
-    dict["data"]["labels"] = names
-    dict["data"]["datasets"][0]["data"] = goals
-    dict["data"]["datasets"][1]["data"] = shots
-    qc.config = str(dict)
-
-    ret_url = qc.get_short_url()
-    logger.info(f"the long url is {qc.get_url()}")
-    return(ret_url)
-
-
-def go_home(handler_input):
-    _ = set_translation(handler_input)
-    if get_supported_interfaces(handler_input).alexa_presentation_apl is not None:
-        return (
-            handler_input.response_builder
-                .speak(wrap_language(handler_input, _("Welcome to Premier League, press a button or scroll to see more options")))
-                .set_should_end_session(False)          
-                .add_directive( 
-                  APLRenderDocumentDirective(
-                    token= "developer-provided-string",
-                    document = {
-                        "type" : "Link",
-                        "token" : "my token",
-                        "src"  : "doc://alexa/apl/documents/GridList"
-                    },
-                    datasources = datasourcessp if is_spanish(handler_input) else datasources2 
-                  )
-                ).response
-            )
-    else:
-        return(handler_input.response_builder.speak(_("This device does not have a screen, what can we help you with")).ask(_("what can we help you with")).response)
-
-        
-class ButtonEventHandler(AbstractRequestHandler):
-    def can_handle(self, handler_input):
-        logger.info("at can handle ButtonEventHandler")
-        if is_request_type("Alexa.Presentation.APL.UserEvent")(handler_input):
-            user_event = handler_input.request_envelope.request
-            return True
-        else:
-            return False
- 
-    def handle(self, handler_input):
-        _ = set_translation(handler_input)
-        logger.info("at ButtonEventHandler")
-        SELECTED_COLOR = "white"
-        UNSELECTED_COLOR = "grey"
-        
-        first_arg = handler_input.request_envelope.request.arguments[0]
-        logger.info(f"first_arg was {first_arg}")
-        
-        if first_arg == 'radioButtonText':
-            radio_button_id   = handler_input.request_envelope.request.arguments[1]['radioButtonId']
-            radio_button_text = handler_input.request_envelope.request.arguments[1]['radioButtonText']
-            logger.info(f"about to send an ExecuteCommands based on {handler_input.request_envelope.request.arguments[1]['radioButtonId']}")
-            buttons = ["Form","Results","Fixtures"]
-            texts   = [_("ShowTeamForm"),_("ShowTeamResults"),_("ShowTeamFixtures")]
-            button_commands = []
-            
-            # for each button turn it on/off based on what was picked
-            for button, button_text in zip(buttons,texts):  
-                value = SELECTED_COLOR if handler_input.request_envelope.request.arguments[1]['radioButtonId'] == button else UNSELECTED_COLOR
-                set_value_command = SetValueCommand(component_id=button,object_property="radioButtonColor",value=value)
-                button_commands.append(set_value_command)
-                
-                logger.info(f"setting {button_text} to {value}")
-                set_value_command = SetValueCommand(component_id=button_text,object_property="color",value=value)
-                button_commands.append(set_value_command)
-
-                value = True if handler_input.request_envelope.request.arguments[1]['radioButtonId'] == button else False
-                if value == True:
-                    # remember what button was selected for the next event
-                    session_attr = handler_input.attributes_manager.session_attributes
-                    session_attr["radioButtonText"] = handler_input.request_envelope.request.arguments[1]['radioButtonId']
-                    handler_input.attributes_manager.session_attributes = session_attr
-
-                set_value_command = SetValueCommand(component_id=button,object_property="checked",value=value)
-                button_commands.append(set_value_command)
-            return (handler_input.response_builder.speak(wrap_language(handler_input, _("Ok, we'll show you team {}")).format(radio_button_id)).add_directive(ExecuteCommandsDirective(token=TOKEN,commands=button_commands)).response)
-        
-        if first_arg == "goaldifference":
-            return(goaldifference(handler_input))
-
-        if first_arg == "savepercent":
-            return(savepercent(handler_input))
-            
-        if first_arg == "goals_shots":
-            return(goals_shots(handler_input))
-            
- 
-        if first_arg == "line":
-            #return(load_and_output_graph(handler_input, linedata))
-            return(do_line_graph(handler_input))
-
-        if first_arg == "goBack":
-            return(go_home(handler_input))
-        
-        if first_arg == "Leave a Review":
-            handler_input.response_builder.speak("Scan this QR code with your phone to leave us a review, thank you!").ask(HELP_REPROMPT)
-            return handler_input.response_builder.response
-            
-            
-        if first_arg == "teams":
-            this_profile = str(get_viewport_profile(handler_input.request_envelope))
-            item_heights = {"ViewportProfile.HUB_LANDSCAPE_SMALL": "75%", "ViewportProfile.HUB_LANDSCAPE_MEDIUM": "65%", "ViewportProfile.HUB_LANDSCAPE_LARGE": "55%"}
-            this_height = item_heights.get(this_profile, "")
-            teamsdatasource["gridListData"]["listItemHeight"] = this_height
-            teamsdatasource["gridListData"]["title"] = _("You can ask about each team")
-            teamsdatasource["radioButtonExampleData"]["radioButtonGroupItems"][0]["radioButtonText"] = _("ShowTeamForm")
-            teamsdatasource["radioButtonExampleData"]["radioButtonGroupItems"][1]["radioButtonText"] = _("ShowTeamResults")
-            teamsdatasource["radioButtonExampleData"]["radioButtonGroupItems"][2]["radioButtonText"] = _("ShowTeamFixtures")
-            logger.info("teamsdatasource")
-            logger.info(str(teamsdatasource))
-            return (
-                handler_input.response_builder
-                    .speak(wrap_language(handler_input, _("Here is the page of just teams")))
-                    .set_should_end_session(False)          
-                    .add_directive( 
-                      APLRenderDocumentDirective(
-                        token= TOKEN,
-                        document = {
-                            "type" : "Link",
-                            "token" : TOKEN,
-                            "src"  : "doc://alexa/apl/documents/RadioButtons"
-                        },
-                        datasources = teamsdatasource 
-                      )
-                    ).response
-                )
-            
-        session_attr = handler_input.attributes_manager.session_attributes
-
-        # if we get here it was an actual button press so we should say something
-
-        vector_table = {"goals"      : goal_hander, 
-                        "cleansheet" : cleansheets_handler, 
-                        "fouls"      : foul_handler, 
-                        "yellowcard" : yellowcard_handler,
-                        "redcard"    : redcard_handler,
-                        "touches"    : touches_handler,
-                        "tackles"    : tackles_handler,
-                        "referee"    : referees_handler,
-                        "results"    : results_handler,
-                        "fixtures"   : fixtures_handler,
-                        "table"      : table_handler,
-                        "relegation" : relegation_handler
-        }
-        logger.info(f"the button that was pressed was {first_arg}")
-        if first_arg in vector_table:
-            return vector_table.get(first_arg)(handler_input)
-        else:
-            verb = session_attr.get("radioButtonText", "")
-            logger.info(f"the verb when a team button was pressed was {verb}")
-            if verb == "Fixtures":
-                return team_results_or_fixtures(handler_input, first_arg, "fixtures2")
-            elif verb == "Results":
-                return team_results_or_fixtures(handler_input, first_arg, "prevWeekFixtures")
-            else:
-                return(team_handler(handler_input, first_arg))
-                
 
 '''
 Return the array of team data points and the highest point total of any team (for the Y-axis)
