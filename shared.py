@@ -8,8 +8,50 @@ noise2_max_millis = 40 * 1000
 noise3_max_millis = 40 * 1000
 doc = "doc://alexa/apla/documents/unchanged_template_from_tools"
 
-datasources2 = {
+foo_table = {
+    "dataTable": {
+        "type": "object",
+        "properties": {
+            "headings": [
+                "",
+                "Team",
+                "GP",
+                "Win",
+                "Draw",
+                "Loss",
+                "GF",
+                "GA",
+                "GD",
+                "Points"                
+                    ],
+            "rows": [
+                ["a","b","c", "d","e","f","g","h","I","J"],
+                ["a","b","c", "d","e","f","g","h","I","J"],
+                ["a","b","c", "d","e","f","g","h","I","J"],
+                ["a","b","c", "d","e","f","g","h","I","J"],
+                ["a","b","c", "d","e","f","g","h","I","J"],
+                ["a","b","c", "d","e","f","g","h","I","J"],
+                ["a","b","c", "d","e","f","g","h","I","J"],
+                ["a","b","c", "d","e","f","g","h","I","J"],
+                ["a","b","c", "d","e","f","g","h","I","J"],
+                ["a","b","c", "d","e","f","g","h","I","J"],
+                ["a","b","c", "d","e","f","g","h","I","J"],
+                ["a","b","c", "d","e","f","g","h","I","J"],
+                ["a","b","c", "d","e","f","g","h","I","J"],
+                ["a","b","c", "d","e","f","g","h","I","J"],
+                ["a","b","c", "d","e","f","g","h","I","J"],
+                ["a","b","c", "d","e","f","g","h","I","J"],
+                ["a","b","c", "d","e","f","g","h","I","J"],
+                ["a","b","c", "d","e","f","g","h","I","J"],
+                ["a","b","c", "d","e","f","g","h","I","J"],
+                ["a","b","c", "d","e","f","g","h","I","J"],
 
+            ]
+        }
+    }
+}
+
+datasources2 = {
     "gridListData": {
         "type": "object",
         "objectId": "gridListSample",
