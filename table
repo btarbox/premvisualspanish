@@ -1,0 +1,104 @@
+{
+    "type": "APL",
+    "version": "1.6",
+    "settings": {},
+    "theme": "dark",
+    "import": [
+        {
+            "name": "alexa-layouts",
+            "version": "1.3.0"
+        }
+    ],
+    "resources": [],
+    "styles": {},
+    "onMount": [],
+    "graphics": {},
+    "commands": {},
+    "layouts": {},
+    "mainTemplate": {
+        "parameters": [
+            "payload"
+        ],
+        "items": [
+            {
+                "type": "ScrollView",
+                "width": "100vw",
+                "height": "100vh",
+                "item": {
+                    "type": "Container",
+                    "items": [
+                        {
+                            "type": "Container",
+                            "direction": "row",
+                            "justifyContent": "spaceAround",
+                            "data": "${payload.dataTable.properties.headings}",
+                            "items": [
+                                {
+                                    "type": "Frame",
+                                    "width": "${viewport.width / 10}",
+                                    "borderColor": "#fff",
+                                    "borderWidth": 0,
+                                    "item": {
+                                        "type": "Text",
+                                        "width": "100%",
+                                        "fontSize": "3vh",
+                                        "fontWeight": "bold",
+                                        "textAlign": "center",
+                                        "text": "${data}"
+                                    }
+                                }
+                            ]
+                        },
+                        {
+                            "type": "Container",
+                            "justifyContent": "spaceAround",
+                            "data": "${payload.dataTable.properties.rows}",
+                            "items": [
+                                {
+                                    "type": "Container",
+                                    "direction": "row",
+                                    "justifyContent": "spaceAround",
+                                    "data": "${data.cells}",
+                                    "bind": [
+                                        {
+                                            "name": "backgroundColor",
+                                            "value": "${data.backgroundColor}"
+                                        }
+                                    ],
+                                    "items": [
+                                        {
+                                            "type": "Frame",
+                                            "backgroundColor": "${backgroundColor}",
+                                            "width": "${viewport.width / 10}",
+                                            "borderColor": "#fff",
+                                            "borderWidth": 0,
+                                            "item": {
+                                                "type": "Text",
+                                                "width": "100%",
+                                                "fontSize": "3vh",
+                                                "textAlign": "center",
+                                                "text": "${data.text}"
+                                            }
+                                        }
+                                    ]
+                                }
+                            ]
+                        },
+                        {
+                            "type": "AlexaButton",
+                            "paddingLeft": "@marginLeft",
+                            "buttonText": "${payload.dataTable.back}",
+                            "id": "idForThisButton",
+                            "primaryAction": {
+                                "type": "SendEvent",
+                                "arguments": [
+                                    "goBack"
+                                ]
+                            }
+                        }
+                    ]
+                }
+            }
+        ]
+    }
+}
