@@ -2,703 +2,1023 @@ from ask_sdk_core.skill_builder import SkillBuilder
 from ask_sdk_core.dispatch_components import (
     AbstractRequestHandler, AbstractExceptionHandler,
     AbstractRequestInterceptor, AbstractResponseInterceptor)
-from ask_sdk_core.utils import is_request_type, is_intent_name, get_intent_name, get_slot, get_slot_value, get_supported_interfaces
+from ask_sdk_core.utils import is_request_type, is_intent_name, get_intent_name, get_slot, get_slot_value
 from ask_sdk_core.handler_input import HandlerInput
+from ask_sdk_model.interfaces.alexa.presentation.apl import RenderDocumentDirective as APLRenderDocumentDirective
+from ask_sdk_model.interfaces.alexa.presentation.apla import RenderDocumentDirective as APLARenderDocumentDirective
+from ask_sdk_core.utils import get_supported_interfaces
+from ask_sdk_core.utils.viewport import get_viewport_profile
 
 from ask_sdk_model.ui import SimpleCard, StandardCard, Image
 from ask_sdk_model import Response
-from ask_sdk_model.interfaces.alexa.presentation.apl import RenderDocumentDirective as APLRenderDocumentDirective
-from ask_sdk_model.interfaces.alexa.presentation.apla import RenderDocumentDirective as APLARenderDocumentDirective
-from ask_sdk_model.interfaces.alexa.presentation.apl import (SetValueCommand, ExecuteCommandsDirective)
-from ask_sdk_core.utils.viewport import get_viewport_profile
+import shared
+from shared import extra_cmd_prompts, doc, noise, noise2, noise3, noise_max_millis, noise2_max_millis, noise3_max_millis
 import logging
-from statshandlers import goal_hander, cleansheets_handler, foul_handler, yellowcard_handler, redcard_handler, touches_handler, tackles_handler, referees_handler
-from statshandlers import results_handler, fixtures_handler, table_handler, relegation_handler, team_handler,  team_results_or_fixtures, table_data, reload_main_table_as_needed
-from statshandlers import NAME_INDEX,GOAL_DIFF_INDEX, find_team_index,load_combined_stats, load_two_stats
-from shared import extra_cmd_prompts,  doc, noise, noise2, noise3, noise_max_millis 
-from shared import noise2_max_millis, noise3_max_millis, datasources2, datasourcessp, test_speach_data, noise_data, teamsdatasource
-from linechartdata import linedata
-import boto3
+import random
 from random import randrange
-from QuickChart import QuickChart
+import re
+import boto3
+import json
+import requests
+from shared import extra_cmd_prompts, doc, noise, noise2, noise3, noise_max_millis, results_table 
+from shared import noise2_max_millis, noise3_max_millis, datasources2, datasourcessp, test_speach_data, noise_data, teamsdatasource
 from datetime import datetime
-from statshandlers import wrap_language, set_translation, is_spanish
+#from multimedia import yellow_red
+import gettext
+lang_translations_en = gettext.translation('base', localedir='locales', languages=['en'])
+lang_translations_en.install()
+lang_translations_sp = gettext.translation('base', localedir='locales', languages=['es'])
+lang_translations_sp.install()
+_ = lang_translations_sp.gettext
 
-
-bucket = "bpltables"
+table_data = []
+table_index = 0
+NAME_INDEX = 0
+PLAYED_INDEX = 1
+WINS_INDEX = 2
+DRAWS_INDEX = 3
+LOSSES_INDEX = 4
+GOALS_FOR_INDEX = 5
+GOALS_AGAINST_INDEX = 6
+GOAL_DIFF_INDEX = 7
+POINTS_INDEX = 8
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
-TOKEN = "buttontoken"
-TICK_WIDTH = 3.0
+
+'''
+wrap_language
+is_spanish
+set_translation
+GoalsHandler
+goal_hander
+ListTeamNamesHandler
+CleanSheetsHandler
+cleansheets_handler
+FoulsHandler
+foul_handler
+output_right_directive
+YellowCardHandler
+yellowcard_handler
+RedCardHandler
+redcard_handler
+TouchesHandler
+touches_handler
+TacklesHandler
+tackles_handler
+RefereesHandler
+referees_handler
+ResultsHandler
+results_handler
+FixturesHandler
+fixtures_handler
+TableHandler
+table_handler
+RelegationHandler
+relegation_handler
+build_team_speech
+team_handler
+build_relegation_fragment
+build_table_fragment
+say_place
+reload_main_table_as_needed
+load_main_table
+'''
+
+def wrap_language(handler_input, text):
+    spanish_prefix = "<lang xml:lang='es-US'><voice name='Miguel'>"
+    spanish_suffix = "</voice></lang>"
+    logger.info(f"wrap in spanish:{is_spanish(handler_input)}")
+    return spanish_prefix+text+spanish_suffix if is_spanish(handler_input) == True else text
 
 
-
-def goaldifference(handler_input):
-    _ = set_translation(handler_input)
-    ds = get_goal_difference_url()
-    response = boto3.client("cloudwatch").put_metric_data(
-        Namespace='PremierLeague',
-        MetricData=[{'MetricName': 'InvocationsWithScreen','Timestamp': datetime.now(),'Value': 1,},]
-    )
-
-    logger.info(ds)
-    return (
-        handler_input.response_builder
-            .speak(wrap_language(handler_input, _("Here are the goal differences, press Back to return")))
-            .set_should_end_session(False)          
-            .add_directive( 
-              APLRenderDocumentDirective(
-                token= TOKEN,
-                document = {
-                    "type" : "Link",
-                    "token" : TOKEN,
-                    "src"  : "doc://alexa/apl/documents/GoalDifference"
-                },
-               # datasources = {"source": {"url": ds}}
-                datasources = {"source": {"url": ds, "back": _("Back")}}
-                    
-              )
-            ).response
-        )
-    
-    
-def savepercent(handler_input):
-    _ = set_translation(handler_input)
-    ds = get_save_percent_url(handler_input)
-    response = boto3.client("cloudwatch").put_metric_data(
-        Namespace='PremierLeague',
-        MetricData=[{'MetricName': 'InvocationsWithScreen','Timestamp': datetime.now(),'Value': 1,},]
-    )
-
-    logger.info(ds)
-    return (
-        handler_input.response_builder
-            .speak(wrap_language(handler_input, _("Here are Keeper saves versus goals, press Back to return")))
-            .set_should_end_session(False)          
-            .add_directive( 
-              APLRenderDocumentDirective(
-                token= TOKEN,
-                document = {
-                    "type" : "Link",
-                    "token" : TOKEN,
-                    "src"  : "doc://alexa/apl/documents/GoalDifference"
-                },
-                #datasources = {"source": {"url": ds}}
-                datasources = {"source": {"url": ds, "back": _("Back")}}
-                    
-              )
-            ).response
-        )
-
-def goals_shots(handler_input):
-    logger.info("at goals_shots")
-    _ = set_translation(handler_input)
-    ds = get_goals_shots_url(handler_input)
-    logger.info(f"ds in goals_shots is {ds}")
-    response = boto3.client("cloudwatch").put_metric_data(
-        Namespace='PremierLeague',
-        MetricData=[{'MetricName': 'InvocationsWithScreen','Timestamp': datetime.now(),'Value': 1,},]
-    )
-
-    logger.info(ds)
-    return (
-        handler_input.response_builder
-            .speak(wrap_language(handler_input, _("Here are goals vs shots, press Back to return")))
-            .set_should_end_session(False)          
-            .add_directive( 
-              APLRenderDocumentDirective(
-                token= TOKEN,
-                document = {
-                    "type" : "Link",
-                    "token" : TOKEN,
-                    "src"  : "doc://alexa/apl/documents/GoalDifference"
-                },
-                datasources = {"source": {"url": ds, "back": _("Back")}}
-                    
-              )
-            ).response
-        )
-    
-    
-''' goal difference '''
-def get_goal_difference_url():
-    qc = QuickChart()
-    qc.width = 500
-    qc.height = 300
-    names = []
-    gds = []
-    reload_main_table_as_needed()
-    
-    for index in range(0,20):
-        name = table_data[index][NAME_INDEX]
-        gd = table_data[index][GOAL_DIFF_INDEX]
-        names.append(name)
-        gds.append(gd)
-    dict = {
-        "type": "horizontalBar", 
-        "data": {"labels": [], 
-                "datasets": [{}]
-        },
-        "options":{
-        "title": {
-          "display": "false",
-          "text": _("Goal Differences")
-        }
-      }    
-    }
-    dict["data"]["labels"] = names
-    dict["data"]["datasets"][0]["data"] = gds
-    dict["data"]["datasets"][0]["label"] = "Goal Differences"
-    dict["data"]["datasets"][0]["backgroundColor"] = 12345
-    dict["data"]["datasets"][0]["borderColor"] = 12345
-    dict["data"]["datasets"][0]["borderWidth"] = 1
-    qc.config = str(dict).replace('12345', "function(context) {var index = context.dataIndex; var value = context.dataset.data[index];return value < 0 ? 'red' : 'blue';}")
-    logger.info(qc.config)
-
-    ret_url = qc.get_short_url()
-    return(ret_url)
+def is_spanish(handler_input):
+    loc = handler_input.request_envelope.request.locale
+    return loc == "es-US" or loc == "es-ES" or loc == "es-MX"
 
 
-def get_line_chart_url(session_attr, handler_input):
-    _ = set_translation(handler_input)
-    #only do this the first time through ....
-    if session_attr.get("first_time_graph", None) is None:
-        session_attr["Liverpool"] = True
-        session_attr["first_time_graph"] = True
-    response = boto3.client("cloudwatch").put_metric_data(
-        Namespace='PremierLeague',
-        MetricData=[{'MetricName': 'InvocationsWithScreen','Timestamp': datetime.now(),'Value': 1,},]
-    )
-
-    qc = QuickChart()
-    qc.width = 500
-    qc.height = 300
-    form_data, highest_point, most_games_played = get_team_points_and_max_points()
-    dict = {"type": "line", "data":{}}
-    dict["data"]["labels"] = []
-    dict["data"]["datasets"] = []
-    dict["options"] = {
-            "responsive": "true",
-            "title": {
-              "display": "true",
-              "text": _("Team Points By Week")
-            },
-            "legend": { 
-                "position": "top",
-                "labels": {
-                    "position": "right",
-                    "boxWidth": 10,
-                    "fontSize": 8
-                }  
-                
-            }    
-
-        }
-    
-    team_count = 0
-    for team, points in form_data.items():
-        name = session_attr.get(team, None)
-        if name is not None:
-            team_count += 1    
-    for x in range(most_games_played):
-        dict["data"]["labels"].append(str(x))
-    rgb = 'rgb(255, 99, 132)'    
-    color_index = 0
-    for team, points in form_data.items():
-        name = session_attr.get(team, None)
-        if name is not None:
-            rgb = team_colors.get(team, None)
-            if rgb is None:
-                logger.info(f"did not find color for {team}")
-                rgb = graph_colors[color_index]
-                color_index += 1
-                if color_index >= len(graph_colors):
-                    color_index = 0
-            logger.info(f"Team {team} is active, get its points and graph it")
-            this_team = form_data.get(team, "not found")
-            if team_count < 6:
-                team_dict = {'label': short_names[team], 'backgroundColor': rgb, 'borderColor':rgb, 'fill': False, 'data': []}
-            else:
-                team_dict = {'label': short_names[team], 'backgroundColor': rgb, 'borderColor':rgb, 'borderDash': team_dash.get(team,[]), 'fill': False, 'data': []}
-            for point in points:
-                team_dict['data'].append(point)
-            logger.info(f"team is {str(team_dict)}")
-            dict['data']['datasets'].append(team_dict)
-    qc.config = dict
-    ret_url = qc.get_short_url()
-    logger.info(qc.config)
-    return(ret_url)
-
-team_dash = {
-    "Arsenal": [1,1],
-    "Aston Villa": [1,1], 
-    "Brentford":[],
-    "Brighton and Hove Albion": [], 
-    "Burnley": [], 
-    "Chelsea": [],
-    "Crystal Palace": [1,1], 
-    "Everton": [], 
-    "Leeds United": [],
-    "Leicester City": [1,1], 
-    "Liverpool": [1,1],
-    "Manchester City": [],
-    "Manchester United": [], 
-    "Newcastle United": [1,1], 
-    "Norwich City": [1,1],
-    "Southampton": [1,1], 
-    "Tottenham Hotspur": [],
-    "Watford": [], 
-    "West Ham United": [], 
-    "Wolverhampton Wanderers": [1,1] 
-    
-}
-team_colors = {
-    "Arsenal": "#EF0107",
-    "Aston Villa": "#95BFE5", 
-    "Brentford": "#fbb800",
-    "Brighton and Hove Albion": "#0057B8", 
-    "Burnley": "#6C1D45", 
-    "Chelsea": "#034694",
-    "Crystal Palace": "#1B458F", 
-    "Everton": "#003399", 
-    "Leeds United": "#FFCD00",
-    "Leicester City": "#003090", 
-    "Liverpool": "#003090",
-    "Manchester City": "#6CABDD",
-    "Manchester United": "#DA291C", 
-    "Newcastle United": "#241F20", 
-    "Norwich City": "#FFF200",
-    "Southampton": "#D71920", 
-    "Tottenham Hotspur": "#132257",
-    "Watford": "#FBEE23", 
-    "West Ham United": "#7A263A", 
-    "Wolverhampton Wanderers": "#FDB913" 
-}
-def do_line_graph(handler_input):
-    _ = set_translation(handler_input)
-    ds = get_line_chart_url(handler_input.attributes_manager.session_attributes, handler_input)
-
-    logger.info(ds)
-    return (
-        handler_input.response_builder
-            .speak(wrap_language(handler_input, _("Team points by week, say add or remove team")))
-            .set_should_end_session(False)          
-            .add_directive( 
-              APLRenderDocumentDirective(
-                token= TOKEN,
-                document = {
-                    "type" : "Link",
-                    "token" : TOKEN,
-                    "src"  : "doc://alexa/apl/documents/GoalDifference"
-                },
-                datasources = {"source": {"url": ds, "back": _("Back")}}
-                    
-              )
-            ).response
-        )
-
-    
-
-def get_save_percent_url(handler_input):
-    _ = set_translation(handler_input)
-    qc = QuickChart()
-    qc.width = 500
-    qc.height = 300
-    names, goals, saves = load_combined_stats(5,"savepercent",1,2,4)
-
-    dict = {
-        "type": "bar", 
-        "data": {
-            "labels": [], 
-                "datasets": [
-                    {
-                        "label": _("Saves"),
-                        "backgroundColor": 'rgb(75, 192, 192)',
-                        "stack": "Stack 0",
-                        "data":[]
-                    },
-                    {
-                        "label":_("goals allowed"),
-                        "backgroundColor": 'rgb(255,99,132)',
-                        "stack": "Stack 1",
-                        "data":[]
-                    }
-                ]
-        },
-        "options":{
-            "responsive": "true",
-            "title": {
-              "display": "true",
-              "text": _("Keeper Saves vs. Goals")
-            },
-            "scales": {
-                "xAxes": [ { "stacked": "true"}],
-                "yAxes": [ { "stacked": "true"}],
-            }
-      }    
-    }
-    dict["data"]["labels"] = names
-    dict["data"]["datasets"][0]["data"] = saves
-    dict["data"]["datasets"][1]["data"] = goals
-    qc.config = str(dict)
-
-    ret_url = qc.get_short_url()
-    logger.info(f"the long url is {qc.get_url()}")
-    return(ret_url)
-
-
-def get_goals_shots_url(handler_input):
-    _ = set_translation(handler_input)
-    logger.info("at get_goals_shots_url")
-    qc = QuickChart()
-    qc.width = 500
-    qc.height = 300
-    names, goals, shots = load_two_stats(5,"goals_shots")
-    logger.info("after load_two_")
-    dict = {
-        "type": "bar", 
-        "data": {
-            "labels": [], 
-                "datasets": [
-                    {
-                        "label": _("Goals"),
-                        "backgroundColor": 'rgb(75, 192, 192)',
-                        "stack": "Stack 0",
-                        "data":[]
-                    },
-                    {
-                        "label":_("Shots"),
-                        "backgroundColor": 'rgb(255,99,132)',
-                        "stack": "Stack 1",
-                        "data":[]
-                    }
-                ]
-        },
-        "options":{
-            "responsive": "true",
-            "title": {
-              "display": "true",
-              "text": _("Goals vs Shots")
-            },
-            "scales": {
-                "xAxes": [ { "stacked": "true"}],
-                "yAxes": [ { "stacked": "true"}],
-            }
-      }    
-    }
-    logger.info("after set dict")
-    dict["data"]["labels"] = names
-    dict["data"]["datasets"][0]["data"] = goals
-    dict["data"]["datasets"][1]["data"] = shots
-    qc.config = str(dict)
-
-    ret_url = qc.get_short_url()
-    logger.info(f"the long url is {qc.get_url()}")
-    return(ret_url)
-
-
-def go_home(handler_input):
-    _ = set_translation(handler_input)
-    if get_supported_interfaces(handler_input).alexa_presentation_apl is not None:
-        return (
-            handler_input.response_builder
-                .speak(wrap_language(handler_input, _("Welcome to Premier League, press a button or scroll to see more options")))
-                .set_should_end_session(False)          
-                .add_directive( 
-                  APLRenderDocumentDirective(
-                    token= "developer-provided-string",
-                    document = {
-                        "type" : "Link",
-                        "token" : "my token",
-                        "src"  : "doc://alexa/apl/documents/GridList"
-                    },
-                    datasources = datasourcessp if is_spanish(handler_input) else datasources2 
-                  )
-                ).response
-            )
-    else:
-        return(handler_input.response_builder.speak(_("This device does not have a screen, what can we help you with")).ask(_("what can we help you with")).response)
-
+def set_translation(handler_input):
+    logger.info("at set_translation {}".format(handler_input.request_envelope.request.locale))
+    if is_spanish(handler_input):
+        _ = lang_translations_sp.gettext
+    else:        
+        _ = lang_translations_en.gettext
         
-class ButtonEventHandler(AbstractRequestHandler):
+    logger.info("returning _ after set_translation {}".format(_))
+    return _
+    
+    
+class GoalsHandler(AbstractRequestHandler):
+    """Handler for GoldenBootIntent."""
+
     def can_handle(self, handler_input):
-        logger.info("at can handle ButtonEventHandler")
-        if is_request_type("Alexa.Presentation.APL.UserEvent")(handler_input):
-            user_event = handler_input.request_envelope.request
-            return True
-        else:
-            return False
- 
+        return (is_intent_name("GoldenBootIntent")(handler_input))
+
+
+    def handle(self, handler_input):
+        logger.info("In GoalsHandler")
+        return goal_hander(handler_input)
+        
+def goal_hander(handler_input):
+    _ = set_translation(handler_input)
+    if "goals" in extra_cmd_prompts:
+        del extra_cmd_prompts["goals"]
+    goal_phrases = [_("the players with the most goals are,"),_("the highest scorers are, "),_("the top scorers are")]
+    intro = random_phrase(0,2, goal_phrases)
+    
+    speech, card_text = load_stats(5, "goldenboot", _(", with "), _(" has "), "  ", 1, 2, 4)
+    speech = intro + speech + ',' + random_prompt(handler_input)
+    
+    image_url = "https://duy7y3nglgmh.cloudfront.net/Depositphotos_goal.jpg"
+    return output_right_directive(handler_input, speech, image_url, noise, noise_max_millis)
+    
+
+class ListTeamNamesHandler(AbstractRequestHandler):
+    """Handler for ListTeamNamesIntent."""
+
+    def can_handle(self, handler_input):
+        #logger.info("in can_handle ListTeamNamesHandler")
+        return (is_intent_name("ListTeamNamesIntent")(handler_input))
+
     def handle(self, handler_input):
         _ = set_translation(handler_input)
-        logger.info("at ButtonEventHandler")
-        SELECTED_COLOR = "white"
-        UNSELECTED_COLOR = "grey"
+        logger.info("In ListTeamNamesHandler")
+        team_name_phrases = [_("We recognize the following team names"),_("These are the teams in the best league in the world"),_("The best teams are")]
+        intro = random_phrase(0,2, team_name_phrases)
+        speech  = ',,Arsenal, Aston Villa, Brentford, Brighton and Hove Albion, Burnley, Chelsea, Crystal Palace,'
+        speech += 'Everton, Leeds, Leicester City, Liverpool, Manchester City, Manchester United, Newcastle United,'
+        speech += 'Norwich City, Southampton, Tottenham Hotspur, Watford, West Ham United and Wolverhamton Wandereres,,'
+        speech += _('You can also refer to teams by their nicknames like gunners or toffees')
+        speech = intro + speech
+        image_url = "https://duy7y3nglgmh.cloudfront.net/Depositphotos_touches.jpg"
         
-        first_arg = handler_input.request_envelope.request.arguments[0]
-        logger.info(f"first_arg was {first_arg}")
+        return output_right_directive(handler_input, speech, image_url, noise, noise_max_millis)
+
+
+class CleanSheetsHandler(AbstractRequestHandler):
+    """Handler for CleanSheetsIntent."""
+
+    def can_handle(self, handler_input):
+        #logger.info("in can_handle CleanSheetsHandler")
+        return (is_intent_name("CleanSheetsIntent")(handler_input))
+
+    def handle(self, handler_input):
+        logger.info("In CleanSheetsHandler")
+        return(cleansheets_handler(handler_input))
         
-        if first_arg == 'radioButtonText':
-            radio_button_id   = handler_input.request_envelope.request.arguments[1]['radioButtonId']
-            radio_button_text = handler_input.request_envelope.request.arguments[1]['radioButtonText']
-            logger.info(f"about to send an ExecuteCommands based on {handler_input.request_envelope.request.arguments[1]['radioButtonId']}")
-            buttons = ["Form","Results","Fixtures"]
-            texts   = [_("ShowTeamForm"),_("ShowTeamResults"),_("ShowTeamFixtures")]
-            button_commands = []
-            
-            # for each button turn it on/off based on what was picked
-            for button, button_text in zip(buttons,texts):  
-                value = SELECTED_COLOR if handler_input.request_envelope.request.arguments[1]['radioButtonId'] == button else UNSELECTED_COLOR
-                set_value_command = SetValueCommand(component_id=button,object_property="radioButtonColor",value=value)
-                button_commands.append(set_value_command)
-                
-                logger.info(f"setting {button_text} to {value}")
-                set_value_command = SetValueCommand(component_id=button_text,object_property="color",value=value)
-                button_commands.append(set_value_command)
+def cleansheets_handler(handler_input):
+    logger.info("at actual cleansheets_handler")
+    _ = set_translation(handler_input)
+    if "cleansheets" in extra_cmd_prompts:
+        del extra_cmd_prompts["cleansheets"]
+    clean_phrases = [_("the goalkeepers with the most clean sheets are,"),_("the most clean sheets go to, "), _("the keepers with the most clean sheets are")]
+    intro = random_phrase(0,2, clean_phrases)
+    
+    speech, card_text = load_stats(5, "cleansheets", _(", with "), _(" has "), "  ", 1, 2, 4)
+    speech = intro + speech + ',' + random_prompt(handler_input)
+    
+    image_url = "https://duy7y3nglgmh.cloudfront.net/Depositphotos_keeper.jpg"
+    return output_right_directive(handler_input, speech, image_url, noise3, noise3_max_millis)
 
-                value = True if handler_input.request_envelope.request.arguments[1]['radioButtonId'] == button else False
-                if value == True:
-                    # remember what button was selected for the next event
-                    session_attr = handler_input.attributes_manager.session_attributes
-                    session_attr["radioButtonText"] = handler_input.request_envelope.request.arguments[1]['radioButtonId']
-                    handler_input.attributes_manager.session_attributes = session_attr
 
-                set_value_command = SetValueCommand(component_id=button,object_property="checked",value=value)
-                button_commands.append(set_value_command)
-            return (handler_input.response_builder.speak(wrap_language(handler_input, _("Ok, we'll show you team {}")).format(radio_button_id)).add_directive(ExecuteCommandsDirective(token=TOKEN,commands=button_commands)).response)
+class FoulsHandler(AbstractRequestHandler):
+    """Handler for FoulsIntent."""
+
+    def can_handle(self, handler_input):
+        #logger.info("in can_handle FoulsHandler")
+        return (is_intent_name("FoulsIntent")(handler_input))
+
+    def handle(self, handler_input):
+        logger.info("In FoulsHandler")
+        return(foul_handler(handler_input))
         
-        if first_arg == "goaldifference":
-            return(goaldifference(handler_input))
+def foul_handler(handler_input):
+    _ = set_translation(handler_input)
+    if "fouls" in extra_cmd_prompts:
+        del extra_cmd_prompts["fouls"]
+    foul_phrases = [_("the players with the most fouls are,"),_("the most fouls were committed by, "),_("the top foulers were,")]
+    intro = random_phrase(0,2, foul_phrases)
+    
+    speech, card_text = load_stats(5, "fouls", _(", with "), _(" has "), "  ", 1, 2, 4)
+    speech = intro + speech + ',' + random_prompt(handler_input)
+    
+    image_url = "https://duy7y3nglgmh.cloudfront.net/Depositphotos_fouls.jpg"
+    return output_right_directive(handler_input, speech, image_url, noise3, noise3_max_millis)
 
-        if first_arg == "savepercent":
-            return(savepercent(handler_input))
-            
-        if first_arg == "goals_shots":
-            return(goals_shots(handler_input))
-            
- 
-        if first_arg == "line":
-            #return(load_and_output_graph(handler_input, linedata))
-            return(do_line_graph(handler_input))
 
-        if first_arg == "goBack":
-            return(go_home(handler_input))
+def output_right_directive(handler_input, the_text, image_url, noise, noise_max):
+    _ = set_translation(handler_input)
+    session_attr = handler_input.attributes_manager.session_attributes
+    already_displayed_screen = session_attr.get("screen_displayed", False)
+    noise_start = str(randrange(0, noise_max))
+    the_text = wrap_language(handler_input, the_text)
+    
+    if get_supported_interfaces(handler_input).alexa_presentation_apl is not None and not already_displayed_screen:
+        session_attr["radioButtonText"] = "Form"
+        handler_input.attributes_manager.session_attributes = session_attr
+        this_profile = str(get_viewport_profile(handler_input.request_envelope))
+        item_heights = {"ViewportProfile.HUB_LANDSCAPE_SMALL": "75%", "ViewportProfile.HUB_LANDSCAPE_MEDIUM": "65%", "ViewportProfile.HUB_LANDSCAPE_LARGE": "55%"}
+        this_height = item_heights.get(this_profile, "")
+        datasources2["gridListData"]["listItemHeight"] = this_height
+        # if is_spanish(handler_input):
+        #     datasources2["gridListData"]["title"] = "Puedes preguntar sobre"
+
+        session_attr["screen_displayed"] = True
+        handler_input.attributes_manager.session_attributes = session_attr
+
+        logger.info(f"output_right_directive visual {the_text}")
+        return (handler_input.response_builder.speak(the_text).set_should_end_session(False)          
+                .add_directive( APLRenderDocumentDirective(
+                    token= "TOKEN",
+                    document = {"type" : "Link","token" : "TOKEN","src"  : "doc://alexa/apl/documents/GridList"},
+                    datasources = datasourcessp if is_spanish(handler_input) else datasources2)).response)
+    elif get_supported_interfaces(handler_input).alexa_presentation_apl is not None:
+        logger.info(f"output_right_directive audio {the_text}, {image_url}, {noise}, {noise_max} {noise_start}.")
+        response = boto3.client("cloudwatch").put_metric_data(
+            Namespace='PremierLeague',
+            MetricData=[{'MetricName': 'InvocationsWithScreen','Timestamp': datetime.now(),'Value': 1,},]
+        )
+        return(handler_input.response_builder.ask(the_text).add_directive(  
+              APLARenderDocumentDirective(
+                token= "tok",
+                document = {"type" : "Link", "src"  : doc},
+                datasources = {"user": {"name": the_text},"crowd": {"noise": noise,"start": noise_start}
+                }
+            )).response)
+    else:
+        card = StandardCard(title=_("Premier League"), text=strip_emotions(the_text), image=Image(small_image_url=image_url, large_image_url=image_url))
+        logger.info(f"output_right_directive audio {the_text}, {image_url}, {noise}, {noise_max} {noise_start}.")
+        response = boto3.client("cloudwatch").put_metric_data(
+            Namespace='PremierLeague',
+            MetricData=[{'MetricName': 'InvocationsWithOutScreen','Timestamp': datetime.now(),'Value': 1,},]
+        )
+        return(handler_input.response_builder.set_card(card).ask(the_text).add_directive(
+              APLARenderDocumentDirective(
+                token= "tok",
+                document = {"type" : "Link", "src"  : doc},
+                datasources = {"user": {"name": the_text},"crowd": {"noise": noise,"start": noise_start}
+                }
+            )).response)
         
-        if first_arg == "Leave a Review":
-            handler_input.response_builder.speak("Scan this QR code with your phone to leave us a review, thank you!").ask(HELP_REPROMPT)
+
+
+class YellowCardHandler(AbstractRequestHandler):
+    """Handler for YellowCardIntent."""
+
+    def can_handle(self, handler_input):
+        #logger.info("in can_handle YellowCardHandler")
+        return (is_intent_name("YellowCardIntent")(handler_input))
+
+    def handle(self, handler_input):
+        logger.info("In YellowCardHandler")
+        return(yellowcard_handler(handler_input))
+        
+def yellowcard_handler(handler_input):
+    _ = set_translation(handler_input)
+    if "yellowcards" in extra_cmd_prompts:
+        del extra_cmd_prompts["yellowcards"]
+    yellow_phrases = [_("the players with the most yellow cards are,"), _("the most cautioned players are, "), _("the most booked players are,")]
+    intro = random_phrase(0,2, yellow_phrases)
+    
+    speech, card_text = load_stats(5, "yellowcards", _(", with "), _(" has "), "  ", 1, 2, 4)
+    speech = intro + speech + ',' + random_prompt(handler_input)
+    
+    image_url = "https://duy7y3nglgmh.cloudfront.net/yellowcard.png"
+    return output_right_directive(handler_input, speech, image_url, noise3, noise3_max_millis)
+
+
+class RedCardHandler(AbstractRequestHandler):
+    """Handler for RedCardIntent."""
+
+    def can_handle(self, handler_input):
+        #logger.info("in can_handle RedCardHandler")
+        return (is_intent_name("RedCardIntent")(handler_input))
+
+    def handle(self, handler_input):
+        logger.info("In RedCardHandler")
+        return(redcard_handler(handler_input))
+        
+def redcard_handler(handler_input):
+    _ = set_translation(handler_input)
+    if "redcards" in extra_cmd_prompts:
+        del extra_cmd_prompts["redcards"]
+    red_phrases = [_("the players with the most red cards are,"),_("the most ejected players are, "),_("the players leaving their teams playing short the most are, ")]
+    intro = random_phrase(0,2, red_phrases)
+    
+    speech, card_text = load_stats(5, "redcards", _(", with "), _(" has "), "  ", 1, 2, 4)
+    speech = intro + speech + ',' + random_prompt(handler_input);
+    
+    image_url = "https://duy7y3nglgmh.cloudfront.net/redcard.png"
+    return output_right_directive(handler_input, speech, image_url, noise, noise_max_millis)
+
+
+class TouchesHandler(AbstractRequestHandler):
+    """Handler for TouchesIntent."""
+
+    def can_handle(self, handler_input):
+        return (is_intent_name("TouchesIntent")(handler_input))
+
+    def handle(self, handler_input):
+        logger.info("In TouchesHandler")
+        return(touches_handler(handler_input))
+        
+def touches_handler(handler_input):
+    _ = set_translation(handler_input)
+    if "touches" in extra_cmd_prompts:
+        del extra_cmd_prompts["touches"]
+    touch_phrases = [_("the players with the most touches are,"),_("the players touching the ball the most are, "), _("the most touches go to, ")]
+    intro = random_phrase(0,2, touch_phrases)
+    
+    speech, card_text = load_stats(5, "touches", _(", with "), _(" has "), "  ", 1, 2, 4)
+    speech = intro + speech + ',' + random_prompt(handler_input)
+    
+    image_url = "https://duy7y3nglgmh.cloudfront.net/Depositphotos_touches.jpg"
+    return output_right_directive(handler_input, speech, image_url, noise, noise_max_millis)
+
+
+class TacklesHandler(AbstractRequestHandler):
+    """Handler for TacklesIntent."""
+
+    def can_handle(self, handler_input):
+        return (is_intent_name("TacklesIntent")(handler_input))
+
+    def handle(self, handler_input):
+        logger.info("In TacklesHandler")
+        return(tackles_handler(handler_input))
+        
+def tackles_handler(handler_input):    
+    _ = set_translation(handler_input)
+    if "tackles" in extra_cmd_prompts:
+        del extra_cmd_prompts["tackles"]
+    tackles_phrases = [_("the players with the most tackles are,"),_("the players tackling the most are, "), _("the most tackles go to, ")]
+    intro = random_phrase(0,2, tackles_phrases)
+    
+    logger.info( f"TACKLES LANG: spanish: {is_spanish(handler_input)} locale: {handler_input.request_envelope.request.locale}")
+    
+    speech, card_text = load_stats(5, "tackles", _(", with "), _(" has "), "  ", 1, 2, 4)
+    speech = intro + speech + ',' + random_prompt(handler_input)
+    
+    image_url = "https://duy7y3nglgmh.cloudfront.net/tackles.png"
+    return output_right_directive(handler_input, speech, image_url, noise2, noise2_max_millis)
+
+
+class RefereesHandler(AbstractRequestHandler):
+    """Handler for RefereesIntent."""
+
+    def can_handle(self, handler_input):
+        return (is_intent_name("RefereesIntent")(handler_input))
+
+    def handle(self, handler_input):
+        logger.info("In RefereesHandler")
+        return(referees_handler(handler_input))
+        
+def referees_handler(handler_input):
+    _ = set_translation(handler_input)
+    if "referees" in extra_cmd_prompts:
+        del extra_cmd_prompts["referees"]
+    # if get_supported_interfaces(handler_input).alexa_presentation_apl is not None:
+    #     return yellow_red(handler_input)
+        
+    referees_phrases = [_("the most used referees are, "),_("the referees who've called the most games are, "),_("the referees in charge of the most games are,  ")]
+    intro = random_phrase(0,2, referees_phrases)
+    
+    speech, card_text = load_stats(5, "referees", " ", _(" yellow cards and "), _(" red cards"), 0, 3, 2)
+    speech = intro + speech + ','
+    speech = speech + random_prompt(handler_input)
+    
+    image_url = "https://duy7y3nglgmh.cloudfront.net/Depositphotos_referee.jpg"
+    return output_right_directive(handler_input, speech, image_url, noise2, noise2_max_millis)
+
+
+class ResultsHandler(AbstractRequestHandler):
+    """Handler for ResultsIntent."""
+
+    def can_handle(self, handler_input):
+        #logger.info("in can_handle ResultsHandler")
+        return (is_intent_name("ResultsIntent")(handler_input))
+
+    def handle(self, handler_input):
+        logger.info("In ResultsHandler")
+        return(results_handler(handler_input))
+
+        
+def results_handler(handler_input):    
+    _ = set_translation(handler_input)
+    if "results" in extra_cmd_prompts:
+        del extra_cmd_prompts["results"]
+    result_phrases = [_("the results for the recent match week were, "),_("last weeks results were "),_("last week saw  ")]
+    intro = random_phrase(0,2, result_phrases)
+    
+    session_attr = handler_input.attributes_manager.session_attributes
+    session_attr["which_list"] = "results"
+    session_attr["results_index"] = 5
+    handler_input.attributes_manager.session_attributes = session_attr
+    
+    speech, card_text = load_stats_ng(handler_input, 5, "prevWeekFixtures", "  ", "  ", "  ", 0, 2, 1, "")
+    if is_spanish(handler_input):
+        str1 = speech.replace("beat", "vencer").replace("lost to", "perdió ante").replace("drew", "Empate")
+        speech = str1
+    speech = intro + speech + ',' + _('Would you like to hear more?')
+    image_url = "https://duy7y3nglgmh.cloudfront.net/tackles.png"
+    
+    return output_right_directive(handler_input, speech, image_url, noise2, noise2_max_millis)
+
+
+
+class FixturesHandler(AbstractRequestHandler):
+    """Handler for FixturesIntent."""
+
+    def can_handle(self, handler_input):
+        return (is_intent_name("FixturesIntent")(handler_input))
+
+    def handle(self, handler_input):
+        logger.info("In FixturesHandler")
+        return(fixtures_handler(handler_input))
+        
+def fixtures_handler(handler_input):    
+    _ = set_translation(handler_input)
+    if "fixtures" in extra_cmd_prompts:
+        del extra_cmd_prompts["fixtures"]
+    fixture_phrases = [_("the fixtures for the current upcoming match week are,"), _("next week we'll see"), _("the next games are,")]
+    intro = random_phrase(0,2, fixture_phrases)
+    set_time_zone(handler_input)        
+
+    session_attr = handler_input.attributes_manager.session_attributes
+    session_attr["which_list"] = "fixtures"
+    session_attr["fixture_index"] = 5
+    handler_input.attributes_manager.session_attributes = session_attr
+    
+    speech, card_text = load_stats_ng(handler_input, 5, "fixtures2", _(" versus "), _(" at "), "  ", 0, 2, 1, "")
+    speech = intro + speech + _('Would you like to hear more?')
+    image_url = "https://duy7y3nglgmh.cloudfront.net/tackles.png"
+    
+    return output_right_directive(handler_input, speech, image_url, noise2, noise2_max_millis)
+
+
+class TableHandler(AbstractRequestHandler):
+    """Handler for TableIntent."""
+
+    def can_handle(self, handler_input):
+        return (is_intent_name("TableIntent")(handler_input))
+
+    def handle(self, handler_input):
+        logger.info("In TableHandler")
+        return(table_handler(handler_input))
+        
+def table_handler(handler_input):    
+    _ = set_translation(handler_input)
+    session_attr = handler_input.attributes_manager.session_attributes
+    session_attr["table_index"] = 5
+    session_attr["which_list"] = "table"
+    handler_input.attributes_manager.session_attributes = session_attr
+    
+    table_index = 0
+    speech = _('The first five teams in the table are ') + build_table_fragment(table_index, handler_input)
+    card_text = strip_emotions(speech)
+    speech = speech + _('Would you like to hear more?')
+    image_url = "https://duy7y3nglgmh.cloudfront.net/tackles.png"
+    
+    return output_right_directive(handler_input, speech, image_url, noise, noise_max_millis)
+
+
+class RelegationHandler(AbstractRequestHandler):
+    """Handler for RelegationIntent."""
+
+    def can_handle(self, handler_input):
+        return (is_intent_name("RelegationIntent")(handler_input))
+
+    def handle(self, handler_input):
+        logger.info("In RelegationHandler")
+        return(relegation_handler(handler_input))
+
+        
+def relegation_handler(handler_input):    
+    _ = set_translation(handler_input)
+    if "relegation" in extra_cmd_prompts:
+        del extra_cmd_prompts["relegation"]
+    relegation_phrases = [_("in the relegation zone "),_("facing relegation"),_("in danger ")];
+    thisPhrase = random_phrase(0,2, relegation_phrases);
+    speech = _("the teams currently ") + thisPhrase + _(" are ") + build_relegation_fragment(handler_input);
+    speech = speech + ',' + random_prompt(handler_input)
+    image_url = "https://duy7y3nglgmh.cloudfront.net/tackles.png"
+    
+    return output_right_directive(handler_input, speech, image_url, noise, noise_max_millis)
+
+
+def build_team_speech(handler_input, this_team_index, team_name):
+    _ = set_translation(handler_input)
+    logger.info(f"building team speak for {team_name} at index {this_team_index}")
+    speech = _("You asked about ") + team_name + _(", their form is ")
+    form = say_place(this_team_index + 1, handler_input) + _(" with ") + pluralize(table_data[this_team_index][WINS_INDEX], "win", 's') + ", "
+    form = form + pluralize(table_data[this_team_index][DRAWS_INDEX], _(" draw"), 's') + ", "
+    form = form + pluralize(table_data[this_team_index][LOSSES_INDEX], _(" loss"), 'es') + ", "
+    form = form + pluralize(table_data[this_team_index][GOALS_FOR_INDEX], _(" goal"), 's') + _(" scored, ")
+    form = form + pluralize(table_data[this_team_index][GOALS_AGAINST_INDEX], _(" goal"), 's') + _(" allowed, ")
+    form = form + _(" for a goal difference of ") + table_data[this_team_index][GOAL_DIFF_INDEX] + _(", and ")
+    form = form + pluralize(table_data[this_team_index][POINTS_INDEX], _(" point"), 's') + ", "
+    form = get_excitement_prefix(this_team_index) + form + get_excitement_suffix()
+    card_text = strip_emotions(speech + form)
+    new_intent = _(", you can also ask for fixtures or results for {}").format(team_name)
+    speech = speech + form + new_intent
+    return (card_text, speech)
+    
+    
+def team_handler(handler_input, team_id):  
+    _ = set_translation(handler_input)
+    logger.info("at team_handler")
+    card_text = ""
+    reload_main_table_as_needed()
+    if team_id is not None:
+        logger.info("found team")
+        this_team_index = find_team_index(team_id)
+        card_text, speech = build_team_speech(handler_input, this_team_index, team_id)
+    else:    
+        slot = get_slot(handler_input, "plteam")
+        if slot.resolutions is None:
+            logger.info("no matching team found")
+            handler_input.response_builder.speak(_("Sorry, I could not find that team, please say a premier league team")).ask(_("Please try again"))
             return handler_input.response_builder.response
-            
-            
-        if first_arg == "teams":
-            this_profile = str(get_viewport_profile(handler_input.request_envelope))
-            item_heights = {"ViewportProfile.HUB_LANDSCAPE_SMALL": "75%", "ViewportProfile.HUB_LANDSCAPE_MEDIUM": "65%", "ViewportProfile.HUB_LANDSCAPE_LARGE": "55%"}
-            this_height = item_heights.get(this_profile, "")
-            teamsdatasource["gridListData"]["listItemHeight"] = this_height
-            teamsdatasource["gridListData"]["title"] = _("You can ask about each team")
-            teamsdatasource["radioButtonExampleData"]["radioButtonGroupItems"][0]["radioButtonText"] = _("ShowTeamForm")
-            teamsdatasource["radioButtonExampleData"]["radioButtonGroupItems"][1]["radioButtonText"] = _("ShowTeamResults")
-            teamsdatasource["radioButtonExampleData"]["radioButtonGroupItems"][2]["radioButtonText"] = _("ShowTeamFixtures")
-            logger.info("teamsdatasource")
-            logger.info(str(teamsdatasource))
-            return (
-                handler_input.response_builder
-                    .speak(wrap_language(handler_input, _("Here is the page of just teams")))
-                    .set_should_end_session(False)          
-                    .add_directive( 
-                      APLRenderDocumentDirective(
-                        token= TOKEN,
-                        document = {
-                            "type" : "Link",
-                            "token" : TOKEN,
-                            "src"  : "doc://alexa/apl/documents/RadioButtons"
-                        },
-                        datasources = teamsdatasource 
-                      )
-                    ).response
-                )
-            
-        session_attr = handler_input.attributes_manager.session_attributes
 
-        # if we get here it was an actual button press so we should say something
-
-        vector_table = {"goals"      : goal_hander, 
-                        "cleansheet" : cleansheets_handler, 
-                        "fouls"      : foul_handler, 
-                        "yellowcard" : yellowcard_handler,
-                        "redcard"    : redcard_handler,
-                        "touches"    : touches_handler,
-                        "tackles"    : tackles_handler,
-                        "referee"    : referees_handler,
-                        "results"    : results_handler,
-                        "fixtures"   : fixtures_handler,
-                        "table"      : table_handler,
-                        "relegation" : relegation_handler
-        }
-        logger.info(f"the button that was pressed was {first_arg}")
-        if first_arg in vector_table:
-            return vector_table.get(first_arg)(handler_input)
-        else:
-            verb = session_attr.get("radioButtonText", "")
-            logger.info(f"the verb when a team button was pressed was {verb}")
-            if verb == "Fixtures":
-                return team_results_or_fixtures(handler_input, first_arg, "fixtures2")
-            elif verb == "Results":
-                return team_results_or_fixtures(handler_input, first_arg, "prevWeekFixtures")
+        dict = slot.resolutions.to_dict()
+        success = dict['resolutions_per_authority'][0]["status"]["code"]
+        if success == 'ER_SUCCESS_MATCH':
+            team_id = dict['resolutions_per_authority'][0]["values"][0]["value"]["id"]
+            team_name = dict['resolutions_per_authority'][0]["values"][0]["value"]["name"]
+            logger.info("found team {} {}".format(team_id, team_name))
+            if team_id == 'Southhampton':
+                team_id = 'Southampton'
+    
+            this_team_index = find_team_index(team_id)
+            if this_team_index == -1:
+                logger.info("could not find team")
+                speech = _("could not find team")
+                card_text = speech
             else:
-                return(team_handler(handler_input, first_arg))
-                
+                card_text, speech = build_team_speech(handler_input, this_team_index, team_name)
+        else:
+            logger.info("could not find team")
+            err_msg = _("could not find team with that name, please try again or ask us for a list of team names")
+            team_id = None
+            logger.info(err_msg)
+            speech = err_msg
+        
+    team_logos = ["Arsenal","AstonVilla","Brentford","BrightonAndHoveAlbion","Burnley", "Chelsea","CrystalPalace","Everton","LeedsUnited","LeicesterCity","Liverpool","ManchesterUnited","ManchesterCity","NewcastleUnited","NorwichCity","Southhampton","TottenhamHotspur","Watford","WestHamUnited","WolverhamptonWanderers" ]
+    if team_id is not None:
+        logger.info("building team response " + speech)
+        #image_url = "https://bplskillimages.s3.amazonaws.com/" + team_id + ".png"
+        image_url = "https://duy7y3nglgmh.cloudfront.net/" + team_id + ".png"
+    else:    
+        logger.info("built simple card")
+    logger.info(f"team_handler speech {speech}")
+    return output_right_directive(handler_input, speech, "https://duy7y3nglgmh.cloudfront.net/football_pitch.png", noise, noise_max_millis)
 
-'''
-Return the array of team data points and the highest point total of any team (for the Y-axis)
-'''
-def get_team_points_and_max_points():
+
+def build_relegation_fragment(handler_input):
+    logger.info("at build_relegation_fragment")
+    _ = set_translation(handler_input)
+    reload_main_table_as_needed()
+    logger.info("there are now {} teams in the table_data".format(len(table_data)))
+    relegation_fragment = ""
+    for index in range(17,20):
+        logger.info("index {}".format(index))
+        logger.info("name {}".format(table_data[index][NAME_INDEX]))
+        logger.info("points {}".format(pluralize(table_data[index][POINTS_INDEX], 'point', 's')))
+        
+        relegation_fragment = relegation_fragment + say_place(index+1, handler_input) + " " + table_data[index][NAME_INDEX] + _(" with ") + pluralize(table_data[index][POINTS_INDEX], _('point'), 's') + ', '
+    return '<amazon:emotion name="disappointed" intensity="high">' + relegation_fragment + '</amazon:emotion>'
+
+
+
+def build_table_fragment(table_index, handler_input):
+    _ = set_translation(handler_input)
+    table_fragment = ""
+    reload_main_table_as_needed()
+    for index in range(table_index, table_index+5):
+        table_fragment = table_fragment + say_place(index+1, handler_input) + " " + table_data[index][NAME_INDEX] + _(" with ") + pluralize(table_data[index][POINTS_INDEX], _(' point'), 's') + ', '
+    returned_str = get_excitement_prefix(table_index) + table_fragment + get_excitement_suffix()
+    table_index = table_index + 5
+    return returned_str
+
+
+def say_place(table_index, handler_input):
+    _ = set_translation(handler_input)
+    if table_index == 1:
+        return _("first place")
+    elif table_index == 2:
+        return _("second place")
+    elif table_index == 3:
+        return _("third place")
+    else:
+        return str(table_index) + "th place"
+
+    
+def reload_main_table_as_needed():
+    if len(table_data) == 0:
+        logger.info("needed to reload main table")
+        load_main_table()
+    else:
+        logger.info("did not need to load main table")
+
+        
+def load_main_table():
     s3 = boto3.client("s3")
-    resp = s3.get_object(Bucket=bucket, Key="line_data")
+    logger.info("about to open main table")
+    resp = s3.get_object(Bucket="bpltables", Key="liveMainTable")
+    logger.info("back from open main table")
+    body_str = resp['Body'].read().decode("utf-8")
+    logger.info("converted streaming_body to string")
+    x = body_str.split("\n")
+    team_index = 0
+    #table_data.clear()
+    #table_data = []
+
+    for team in x:
+        one_team = team.split(",")
+        table_data.append(one_team)
+        team_index = team_index + 1
+        if team_index > 19:
+            break
+    table_index = 0
+    logger.info("loaded {} teams into table_data".format(len(table_data)))
+
+
+def random_phrase(low, high, phrases):
+    return phrases[randrange(low, high)];
+
+
+def random_prompt(handler_input):
+    _ = set_translation(handler_input)
+    variedPrompts = [_("Say get table, or say a team name "), _("Ask about the table or a team"), _("What can we tell you about Premier League  "), _("We can tell you about teams or the table")]
+    return variedPrompts[randrange(0, 3)] + suggest(handler_input);
+  
+    
+def pluralize(count, noun, ess):
+    if int(count) == 1:
+        return count + " " + noun
+    else:
+        return count + " " + noun + ess
+        
+
+def load_suggestions(handler_input):
+    _ = set_translation(handler_input)
+    extra_cmd_prompts["touches"]      = _(". you can also ask about touches")
+    extra_cmd_prompts["fouls"]        = _(". you can also ask about fouls")
+    extra_cmd_prompts["tackles"]      = _(". you can also ask about tackles")
+    extra_cmd_prompts["stadiums"]     = _(". you can also ask about Premier League stadiums by name")
+    extra_cmd_prompts["referees"]     = _(". you can also ask about referees")
+    extra_cmd_prompts["fixtures"]     = _(". you can also ask about fixtures")
+    extra_cmd_prompts["results"]      = _(". you can also ask about last weeks results")
+    extra_cmd_prompts["teamfixtures"] = _(". you can also ask about fixtures for a team")
+    extra_cmd_prompts["teamresults"]  = _(". you can also ask about results for a team")
+    extra_cmd_prompts["relegation"]   = _(". you can also ask about relegation")
+    extra_cmd_prompts["redcards"]     = _(". you can also say red cards")
+    extra_cmd_prompts["yellowcards"]  = _(". you can also say yellow card")
+    extra_cmd_prompts["cleansheets"]  = _(". you can also ask about clean sheets")
+    extra_cmd_prompts["goals"]        = _(". you can also ask about goals")
+
+
+def suggest(handler_input):
+    session_attr = handler_input.attributes_manager.session_attributes
+    if session_attr.get("screen_displayed", False) == True:
+        return ""
+    suggestions_left = len(extra_cmd_prompts)
+    logger.info("There are {} suggestions remaining".format(suggestions_left))
+    sugs = " "
+    if suggestions_left > 0:
+        key,value = random.choice(list(extra_cmd_prompts.items()))
+        #del extra_cmd_prompts[key]
+        logger.info("suggesting " + value)
+        return value
+    else:
+        load_suggestions()    
+    return ""
+
+
+def strip_emotions(str):
+    try:
+        index = str.index("<")
+        index2 = str.index(">")
+        str2 = str[:index] + str[index2+1:]
+        return str2.replace("</amazon:emotion>","")
+    except:
+        return str
+
+def get_excitement_prefix(index):
+    ''' speak with excitement or disappointment but with some randomness '''
+    
+    high_or_medium = "high" if randrange(0,2)==0 else "medium"
+    medium_or_low = "medium" if randrange(0,2)==0 else "low"
+    
+    if index < 5:
+        return '<amazon:emotion name="excited" intensity="{}">'.format(high_or_medium)
+    elif index < 10:
+        return '<amazon:emotion name="excited" intensity="{}">'.format(medium_or_low)
+    elif index < 15:
+        return '<amazon:emotion name="disappointed" intensity="{}">'.format(medium_or_low)
+    else:
+        return '<amazon:emotion name="disappointed" intensity="high">'.format(high_or_medium)
+        
+        
+def get_excitement_suffix():
+    return '</amazon:emotion>'
+
+
+def normalize_score(score):
+    if score.find(" to ") != -1:
+        res = score.split(" ")
+        if res[2] > res[0]:
+            score = res[2] + " " + res[1] + " " + res[0]
+        score = score.replace("0", "nil")
+        return score
+    else:
+        return score
+
+    
+def get_one_line(noun1, article1, noun2, article2, noun3, article3):
+    found_number_or_none = re.search("[0-9]", noun1)
+    found_number = False if found_number_or_none is None else True
+    
+    found_nil = noun1.find('nil')
+    
+    noun3 = normalize_score(noun3)
+    if found_number or found_nil != -1:
+        return noun1 + "<break time='350ms'/>" + noun2
+    else:
+        return noun1 + article1 + noun2 + article2 + noun3 + article3 + ","
+
+
+def load_stats(number, filename, article1, article2, article3, firstCol, secondCol, thirdCol):
+    say = ""
+    card_text = ""
+    s3 = boto3.client("s3")
+    bucket = "bpltables"
+    logger.info('try to open file ' + bucket + ":" + filename)
+    resp = s3.get_object(Bucket=bucket, Key=filename)
+    body_str = resp['Body'].read().decode("utf-8")
+    logger.info("converted streaming_body to string")
+    logger.info(body_str)
+    n = body_str.split("\n")
+    oneCard = n[0].split(',')
+    
+    for index in range(0,number):
+        oneCard = n[index].split(',')
+        third = oneCard[thirdCol] if thirdCol > -1 else ""
+        new_text = get_one_line(oneCard[firstCol], article1, oneCard[secondCol], article2, third, article3)
+        say = say + ", " + new_text
+        card_text = card_text + new_text + "\n"
+        logger.info("building at index {} {}".format(index, say))
+    return (say, strip_emotions(card_text))
+
+
+def load_combined_stats(number, filename, firstCol, secondCol, thirdCol):
+    s3 = boto3.client("s3")
+    bucket = "bpltables"
+    logger.info('try to open file ' + bucket + ":" + filename)
+    resp = s3.get_object(Bucket=bucket, Key=filename)
+    body_str = resp['Body'].read().decode("utf-8")
+    n = body_str.split("\n")
+    oneCard = n[0].split(',')
+    names = []
+    goals = []
+    saves = []
+
+    for index in range(0,number):
+        oneCard = n[index].split(',')
+        names.append(oneCard[firstCol])
+        team_index = find_team_index(oneCard[secondCol])
+        saves.append(int(oneCard[thirdCol]))
+        goals.append(table_data[team_index][GOALS_AGAINST_INDEX])
+    return (names,goals,saves)
+
+
+def load_two_stats(number, filename):
+    s3 = boto3.client("s3")
+    bucket = "bpltables"
+    logger.info('load_two_stats try to open file ' + bucket + ":" + filename)
+    try:
+        resp = s3.get_object(Bucket=bucket, Key=filename)
+        body_str = resp['Body'].read().decode("utf-8")
+        n = body_str.split("\n")
+        oneCard = n[0].split(',')
+        names = []
+        stat1 = []
+        stat2 = []
+        logger.info(f"opened file {n} {oneCard}")
+        for index in range(0,number):
+            oneCard = n[index].split(',')
+            names.append(oneCard[0])
+            stat1.append(int(oneCard[1]))
+            stat2.append(int(oneCard[2]))
+        logger.info("retrieved data")
+        return (names,stat1,stat2)
+    except Exception as ex:
+         logger.error(ex)
+
+    
+def load_stats_ng(handler_input, number, filename, article1, article2, article3, firstCol, secondCol, thirdCol, team_to_match, lines_to_skip=0):
+    _ = set_translation(handler_input)
+    say = ""
+    card_text = ""
+    s3 = boto3.client("s3")
+    bucket = "bpltables"
+    logger.info('try to open file ' + bucket + ":" + filename)
+    resp = s3.get_object(Bucket=bucket, Key=filename)
     body_str = string_data = resp['Body'].read().decode("utf-8")
     logger.info("converted streaming_body to string")
+    logger.info("load_stats_ng, lines_to_skip:" + str(lines_to_skip))
+    #logger.info(body_str)
     n = body_str.split("\n")
-    n.pop()
     lines_in_file = len(n)
-    form_data = {}
-    highest_point = 0
-    most_games_played = 0
-    
-    for line in n:
-        logger.info(f"line is {line}")
-        this_line = line.split(',')
-        team_points = this_line[1:]
-        if len(team_points) > most_games_played:
-            most_games_played = len(team_points)
-        form_data[this_line[0]] = team_points
-        this_teams_total = int(this_line[-1])
-        if this_teams_total > highest_point:
-            highest_point = this_teams_total
-            
-    logger.info("highest point is " + str(highest_point))
-    return form_data, highest_point, most_games_played
-
-'''
-blue	rgb(0,0,255)
-green	rgb(0,128,0)
-lime	rgb(0,255,0)
-aqua	rgb(0,255,255)
-silver	rgb(192,192,192)
-red	    rgb(255,0,0)
-yellow	rgb(255,255,0)
-'''
-graph_colors = [
-"rgb(0,0,255)",
-"rgb(0,128,0)",
-"rgb(0,255,0)",
-"rgb(0,255,255)",
-"rgb(192,192,192)",
-"rgb(255,0,0)",
-"rgb(255,255,0)"
-]
-
-def random_color():
-    return f"rgba({randrange(255)},{randrange(255)},{randrange(255)},1)"
-    
-
-class AddTeamIntentHandler(AbstractRequestHandler):
-    def can_handle(self, handler_input):
-        return is_intent_name("AddTeamIntent")(handler_input)
-
-    def handle(self, handler_input):
-        logger.info("Add handler")
-        return(add_or_delete_team(handler_input, "add"))
-
-class RemoveTeamIntentHandler(AbstractRequestHandler):
-    def can_handle(self, handler_input):
-        return is_intent_name("RemoveTeamIntent")(handler_input)
-
-    def handle(self, handler_input):
-        logger.info("Remove handler")
-        return(add_or_delete_team(handler_input, "remove"))
-
-def team_in_chart(session_attr,team):
-    name = session_attr.get(team, None)
-    return False if name is None else True
-
-    
-'''
-The voice model has one slot but that slot is marked as can accept multiple values.
-So, the slot value might be in one part of the handler_input or a different part
-'''
-def add_or_delete_team(handler_input, mode):
-    _ = set_translation(handler_input)
-    if get_supported_interfaces(handler_input).alexa_presentation_apl is None:
-        logger.info(f"{mode} on a device without a screen, give error")
-        response = _("Sorry, adding or removing teams for the graph is only supported on devices with screens.")
-        reprompt = _(" What can we tell you about premier league?")
-        return (
-            handler_input.response_builder
-                .ask(reprompt)
-                .speak(response + reprompt).response
-        )
-    prompt = None
-    
-    slot = get_slot(handler_input, "plteam")
-    if slot.resolutions is not None:    # there is only one slot value
-        dict = slot.resolutions.to_dict()
-        logger.info("-------")
-        logger.info(str(dict['resolutions_per_authority'][0]['status']['code']))
-        if dict['resolutions_per_authority'][0]['status']['code'] == "ER_SUCCESS_NO_MATCH":
-            logger.info("no matching team found")
-            handler_input.response_builder.speak("Sorry, I could not find that team, please say add or remove team").ask("Please try again")
-            return handler_input.response_builder.response
-        logger.info("Team name is: " + dict['resolutions_per_authority'][0]["values"][0]["value"]["name"])
-        team = dict['resolutions_per_authority'][0]["values"][0]["value"]["name"]
-        session_attr = handler_input.attributes_manager.session_attributes
-        if mode == "add":
-            session_attr[team] = True
-            #prompt = "added {} to the graph".format(team)
+    logger.info(f"there are {len(n)} items in the list")
+    oneCard = n[0].split(',')
+    date_lines = 0;
+    index = 0
+    skip_index = 0
+    while skip_index < (lines_to_skip):
+        if index >= lines_in_file:
+            break
+        oneCard = n[index].split(',')
+        if oneCard[0] == 'date':
+            index += 1
+            date_lines += 1;
+            logger.info("increment index but don't increment lines to skip")
         else:
-            session_attr.pop(team, "not found ")
-            logger.info(f"removed {team} from the session and its still there?: {team_in_chart(session_attr,team)}")
-            #prompt = "removed {} from the graph".format(team)
-        handler_input.attributes_manager.session_attributes = session_attr
-        return((do_line_graph(handler_input)))   #(do_line_graph(handler_input))
+            index += 1
+            skip_index += 1
+            logger.info("we have seen one of the lines to skip")
 
-    else:  # there are multiple slot values
-        session_attr = handler_input.attributes_manager.session_attributes
-        prompt = mode + "ed "
-        if slot.slot_value is not None:
-            for value in slot.slot_value.values:
-                logger.info("Team Name: " + str(value.resolutions.resolutions_per_authority[0].values[0].value.name))
-                team = str(value.resolutions.resolutions_per_authority[0].values[0].value.name)
-                if mode == "add":
-                    session_attr[team] = True
-                    logger.info(f"added {team} to the session")
-                    prompt += team
+    logger.info(f"index: {index} number:{number} date_lines: {date_lines} lines_to_skip: {lines_to_skip}")
+    last_line_was_a_date = False
+    
+    try:
+        while (index < (number + date_lines + lines_to_skip)) and (index < lines_in_file):
+            oneCard = n[index].split(',')
+            if oneCard[0] == 'date':
+                if last_line_was_a_date == False:
+                    say += ' ' + oneCard[1] + ' '
+                    last_line_was_a_date = True
+                date_lines += 1;
+            else:
+                third = oneCard[thirdCol] if thirdCol > -1 else ""
+                try:
+                    if ":" in third:
+                        x = third.split(":")
+                        third =  get_tz_adjusted_time(handler_input, x[0], x[1])
+                except Exception as ex:
+                    logger.info("exception getting tz")
+                    logger.info(ex)
+                new_text = ""
+                try:
+                    new_text = get_one_line(oneCard[firstCol], article1, oneCard[secondCol], article2, third, article3)
+                except Exception as ex:
+                    logger.info(ex)
+                    logger.info(f"error calling get_one_line, {index}")
+                    break
+                if team_matches(team_to_match, new_text):
+                    say = say + ", " + new_text
+                    card_text = card_text + new_text + "\n"
+                    last_line_was_a_date = False
                 else:
-                    session_attr.pop(team, "not found 2")
-                    logger.info(f"removed {team} to the session and its still there?: {team_in_chart(session_attr,team)}")
-                    prompt += team
-        handler_input.attributes_manager.session_attributes = session_attr
-        return((do_line_graph(handler_input)))
+                    date_lines += 1
+            index += 1
+    except:
+        logging.info("RAN OFF END OF LIST OF FIXTURES OR RESULTS")
+        say += _(" that is the end of the list. ")
+    return (say, strip_emotions(card_text))            
+
+
+''' adjust the input time to the already determined timezone '''
+def get_tz_adjusted_time(handler_input, local_hour, local_minute):
+    session_attr = handler_input.attributes_manager.session_attributes
+    last_local_time   = session_attr.get("local_time", None)
+    last_local_hour   = session_attr.get("local_hour", None)
+    last_local_minute = session_attr.get("local_minute", None)
+    if (local_hour == last_local_hour) and (last_local_minute == local_minute) and (last_local_time is not None):
+        return last_local_time
+
+    userTimeZone = session_attr.get("timezone", None)
+    #userTimeZone = get_time_zone(handler_input)
+    lambda_client = boto3.client("lambda")
+    body = '{"hour":"' + str(local_hour) + '","minute":"' +  str(local_minute) +  '","dest_timezone":"' +  userTimeZone +  '"}'
+    logger.info("body is " + body)
+    resp = lambda_client.invoke(FunctionName="timezone", Payload=body)
+    payload = resp['Payload'].read().decode("utf-8")
+    jpay = json.loads(payload)
+    local_time = jpay.get("body")    
+    session_attr["local_hour"] = local_hour
+    session_attr["local_minute"] = local_minute
+    session_attr["local_time"] = local_time
+    handler_input.attributes_manager.session_attributes = session_attr
+    
+    return local_time
+
+
+
+''' Accept a cannonical name from Speech Model such as "tottenhamhotspurs" , convert to name as in text files and look for a match'''
+def team_matches(team_name, text_to_search):
+    #logger.info(f"team_matches {team_name} {text_to_search}")
+    if team_name == "":
+        return True
+    cannonical_names = {
+        #"as appears in table" : "as appears in results"
+        "Arsenal"           : "Arsenal",
+        "Aston Villa"       : "Aston Villa",
+        "Burnley"           : "Burnley",
+        "Brentford"         : "Brentford",
+        "Brighton and Hove Albion" : "Brighton",
+        "Chelsea"           : "Chelsea",
+        "Crystal Palace"    : "Crystal Palace",
+        "Everton"           : "Everton",
+        "Leeds United"      : "Leeds",
+        "Leicester City"    : "Leicester",
+        "Liverpool"         : "Liverpool",
+        "Manchester United" : "Manchester United",
+        "Manchester City"   : "Manchester City",
+        "Newcastle United"  : "Newcastle",
+        "Norwich City"      : "Norwich",
+        "Southampton"       : "Southampton",
+        "Tottenham Hotspur" : "Tottenham Hotspur", 
+        "Watford"           : "Watford",
+        "Westham United"    : "West Ham",
+        "Wolverhampton Wanderers" : "Wolves"
+    }
+    name_to_look_for = cannonical_names.get(team_name, "not found")
+    match_index = text_to_search.upper().find(name_to_look_for.upper())
+    if match_index == -1:
+        pass
+        #logger.info(f"{name_to_look_for} not found in {text_to_search}")
+    else:
+        logger.info(f"{name_to_look_for} FOUND in {text_to_search}")
+    return match_index != -1
+    
+
+def find_team_index(team_id):
+    reload_main_table_as_needed()
+    for index, team in enumerate(table_data):
+        if team[NAME_INDEX].upper().replace(" ", "") == team_id.upper().replace(" ", ""):
+            return index
+        if team[NAME_INDEX].upper().replace(" ", "") == team_id.upper():
+            return index
+    logger.info(f"did not find {team_id} in {str(table_data)}")
+    return -1
+
+    
+def team_results_or_fixtures(handler_input, team_name, results_or_fixtures):
+    _ = set_translation(handler_input)
+    intro = _("recent results for {} were").format(team_name) if results_or_fixtures == "prevWeekFixtures" else _("upcoming fixtures for {} are").format(team_name)
+
+    speech, card_text = load_stats_ng(handler_input, 5, results_or_fixtures, "  ", "  ", "  ", 0, 2, 1, team_name)
+    speech = intro + speech + ',' + _("press a button")
+    card = SimpleCard("Results", card_text)
+    if get_supported_interfaces(handler_input).alexa_presentation_apl is not None:
+        card = None
+    handler_input.response_builder.ask(speech).set_card(card).add_directive(
+          APLARenderDocumentDirective(
+            token= "tok",
+            document = {"type" : "Link", "src"  : doc},
+            datasources = {"user": {"name": wrap_language(handler_input, speech)},"crowd": {"noise": noise3,"start": str(randrange(0, noise3_max_millis))}
+            }
+            )
+        )
+    return handler_input.response_builder.response    
+    
+''' set the timezone based on handler_input '''
+def set_time_zone(handler_input):
+    session_attr = handler_input.attributes_manager.session_attributes
+    tz = session_attr.get("timezone", None)
+    if tz is not None:
+        return
+    sys_object = handler_input.request_envelope.context.system
+    device_id = sys_object.device.device_id
+
+    # get Alexa Settings API information
+    api_endpoint = sys_object.api_endpoint
+    api_access_token = sys_object.api_access_token
+    #logger.info(f"sys_object {sys_object} token {api_access_token}")
+
+    # construct systems api timezone url
+    url = '{api_endpoint}/v2/devices/{device_id}/settings/System.timeZone'.format(api_endpoint=api_endpoint, device_id=device_id)
+    headers = {'Authorization': 'Bearer ' + api_access_token}
+
+    userTimeZone = ""
+    try:
+        r = requests.get(url, headers=headers)
+        res = r.json()
+        logger.info("Device API result: {}".format(str(res)))
+        userTimeZone = res
+        logger.info("********** got TZ ***************")
+        # lambda_client = boto3.client("lambda")
+        # body = '{"hour":"7","minute":"30","dest_timezone":"' + userTimeZone + '"}'
+        # #logger.info("body is " + body)
+        # resp = lambda_client.invoke(FunctionName="timezone", Payload=body)
+        # payload = resp['Payload'].read().decode("utf-8")
+        # jpay = json.loads(payload)
+        # #logger.info(f'the time in {userTimeZone} is {jpay.get("body")}')
         
-short_names = {
-    #"as appears in table" : "as appears in results"
-    "Arsenal"           : "Arsenal",
-    "Aston Villa"       : "Villa",
-    "Burnley"           : "Burnley",
-    "Brentford"         : "Brentford",
-    "Brighton and Hove Albion" : "Brighton",
-    "Chelsea"           : "Chelsea",
-    "Crystal Palace"    : "Palace",
-    "Everton"           : "Everton",
-    "Leeds United"      : "Leeds",
-    "Leicester City"    : "Leicester",
-    "Liverpool"         : "Liverpool",
-    "Manchester United" : "Man United",
-    "Manchester City"   : "Man City",
-    "Newcastle United"  : "Newcastle",
-    "Norwich City"      : "Norwich",
-    "Southampton"       : "Southampton",
-    "Tottenham Hotspur" : "Spurs", 
-    "Watford"           : "Watford",
-    "West Ham United"    : "West Ham",
-    "Wolverhampton Wanderers" : "Wolves"
-}        
+        session_attr["timezone"] = userTimeZone
+        handler_input.attributes_manager.session_attributes = session_attr
+        #return jpay.get("body")
+    except Exception as ex:
+        logger.info("could not get timezone " + str(ex))
+        #return None
+    
