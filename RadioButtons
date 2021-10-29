@@ -1,0 +1,107 @@
+{
+    "type": "APL",
+    "version": "1.7",
+    "import": [
+        {
+            "name": "alexa-layouts",
+            "version": "1.4.0"
+        }
+    ],
+    "layouts": {
+        "RadioButtonRow": {
+            "description": "Display AlexaRadioButton next to a line of text describing the option.",
+            "parameters": [
+                "radioButtonText",
+                "radioButtonId",
+                "checked",
+                "disabled",
+                "primaryAction"
+            ],
+            "items": {
+                "direction": "row",
+                "items": [
+                    {
+                        "type": "AlexaRadioButton",
+                        "id": "${radioButtonId}",
+                        "checked": "${checked}",
+                        "disabled": "${disabled}",
+                        "radioButtonHeight": "100%"
+                    },
+                    {
+                        "type": "TouchWrapper",
+                        "item": {
+                            "type": "Text",
+                            "fontSize": "25px",
+                            "text": "${radioButtonText}",
+                            "id": "${radioButtonText}",
+                            "color": "green",
+                            "textAlignVertical": "center"
+                        },
+                        "onPress": [
+                            {
+                                "type": "SendEvent",
+                                "arguments": [
+                                    "radioButtonText",
+                                    "${data}",
+                                    "${id}"
+                                ]
+                            }
+                        ]
+                    }
+                ],
+                "type": "Container"
+            }
+        }
+    },
+    "mainTemplate": {
+        "parameters": [
+            "gridListData",
+            "radioButtonExampleData"
+        ],
+        "items": [
+            {
+                "type": "Container",
+                "width": "100%",
+                "height": "100%",
+                "paddingTop": "@spacingMedium",
+                "paddingBottom": "@spacingMedium",
+                "bind": [
+                    {
+                        "name": "CurrentSelectedRadioButtonId",
+                        "value": "Form"
+                    }
+                ],
+                "items": [
+                    {
+                        "type": "Sequence",
+                        "id": "myRadioButtonGroup",
+                        "data": "${radioButtonExampleData.radioButtonGroupItems}",
+                        "shrink": 0,
+                        "item": {
+                            "type": "RadioButtonRow",
+                            "radioButtonId": "${data.radioButtonId}",
+                            "radioButtonText": "${data.radioButtonText}",
+                            "checked": "${data.radioButtonId == CurrentSelectedRadioButtonId}",
+                            "disabled": "${data.disabled}"
+                        }
+                    },
+                    {
+                        "type": "AlexaGridList",
+                        "id": "plantList",
+                        "listItemHeight": "${gridListData.listItemHeight}",
+                        "headerTitle": "${gridListData.title}",
+                        "headerBackButton": true,
+                        "headerAttributionImage": "$gridListData.logoUrl}",
+                        "hideOrdinal": true,
+                        "backgroundImageSource": "${gridListData.backgroundImage.sources[0].url}",
+                        "imageAspectRatio": "standard_landscape",
+                        "imageAlignment": "bottom-left",
+                        "imageScale": "best-fit",
+                        "listItems": "${gridListData.listItems}",
+                        "spacing": "0"
+                    }
+                ]
+            }
+        ]
+    }
+}
