@@ -1,0 +1,97 @@
+{
+    "type": "APL",
+    "version": "1.6",
+    "settings": {},
+    "theme": "dark",
+    "import": [
+        {
+            "name": "alexa-layouts",
+            "version": "1.3.0"
+        }
+    ],
+    "resources": [],
+    "styles": {},
+    "onMount": [],
+    "graphics": {},
+    "commands": {},
+    "layouts": {},
+    "mainTemplate": {
+        "parameters": [
+            "payload"
+        ],
+        "items": [
+            {
+                "type": "ScrollView",
+                "width": "100vw",
+                "height": "100vh",
+                "item": {
+                    "type": "Container",
+                    "items": [
+                        {
+                            "type": "Container",
+                            "justifyContent": "spaceAround",
+                            "data": "${payload.dataTable.properties.rows}",
+                            "items": [
+                                {
+                                    "type": "Container",
+                                    "direction": "row",
+                                    "justifyContent": "spaceAround",
+                                    "data": "${data.cells}",
+                                    "bind": [
+                                        {
+                                            "name": "backgroundColor",
+                                            "value": "${data.backgroundColor}"
+                                        }
+                                    ],
+                                    "items": [
+                                        {
+                                            "when": "${data.istext == 'True'}",
+                                            "type": "Frame",
+                                            "backgroundColor": "${data.backgroundColor}",
+                                            "width": "${data.width}",
+                                            "borderColor": "#fff",
+                                            "borderWidth": 0,
+                                            "item": {
+                                                "type": "Text",
+                                                "fontSize": "5vh",
+                                                "textAlign": "center",
+                                                "textAlignVertical": "center",
+                                                "text": "${data.text}",
+                                                "color": "${data.color}"
+                                            }
+                                        },
+                                        {
+                                            "when": "${data.istext == 'False'}",
+                                            "type": "Frame",
+                                            "backgroundColor": "white",
+                                            "width": "${viewport.width / 10}",
+                                            "height": "${viewport.height / 6}",
+                                            "borderColor": "#fff",
+                                            "borderWidth": 0,
+                                            "item": {
+                                                "type": "Image",
+                                                "source": "${data.text}"
+                                            }
+                                        }
+                                    ]
+                                }
+                            ]
+                        },
+                        {
+                            "type": "AlexaButton",
+                            "paddingLeft": "@marginLeft",
+                            "buttonText": "${payload.dataTable.back}",
+                            "id": "idForThisButton",
+                            "primaryAction": {
+                                "type": "SendEvent",
+                                "arguments": [
+                                    "goBack"
+                                ]
+                            }
+                        }
+                    ]
+                }
+            }
+        ]
+    }
+}
