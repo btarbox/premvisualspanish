@@ -18,7 +18,8 @@ from random import randrange
 import random
 import re
 import requests
-from ask_sdk_core.skill_builder import SkillBuilder
+from ask_sdk_core.api_client import DefaultApiClient
+from ask_sdk_core.skill_builder import SkillBuilder, CustomSkillBuilder
 from ask_sdk_core.dispatch_components import (
     AbstractRequestHandler, AbstractExceptionHandler,
     AbstractRequestInterceptor, AbstractResponseInterceptor)
@@ -48,6 +49,7 @@ lang_translations_en = gettext.translation('base', localedir='locales', language
 lang_translations_en.install()
 lang_translations_sp = gettext.translation('base', localedir='locales', languages=['es'])
 lang_translations_sp.install()
+from multimedia import results_visual
 #_ = gettext.translation('base', localedir='locales', languages=['en']).gettext
 #tr = lang_translations_en.gettext
 
@@ -57,7 +59,9 @@ logger.setLevel(logging.INFO)
 SKILL_NAME = "PremierLeague"
 HELP_REPROMPT = 'What can we help you with?'
 
-sb = SkillBuilder()
+#sb = SkillBuilder()
+sb = CustomSkillBuilder(api_client=DefaultApiClient())
+
 sns_client = boto3.client('sns')
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
@@ -66,21 +70,7 @@ logger.setLevel(logging.DEBUG)
 TOKEN = "buttontoken"
 TICK_WIDTH = 3.0
 
-# def set_translation(handler_input):
-#     #global tr
-#     #global _
-#     logger.info("at set_translation {}".format(handler_input.request_envelope.request.locale))
-#     if handler_input.request_envelope.request.locale == "en-US":
-#         _  = lang_translations_en.gettext
-#         #tr = lang_translations_en.gettext
-#         logger.info("ENGLISH")
-#     else:
-#         _  = lang_translations_sp.gettext
-#         #tr = lang_translations_sp.gettext
-#         logger.info("SPANISH")
-#     return _
-#     #logger.info("returning _ after set_translation English:{} Spanish:{} underbar:{} tr:{}".format(lang_translations_en, lang_translations_sp, _, tr))
-    
+
 class WelcomeHandler(AbstractRequestHandler):
     """Handler for StartIntent."""
 
@@ -89,6 +79,7 @@ class WelcomeHandler(AbstractRequestHandler):
 
     def handle(self, handler_input):
         try:
+            logger.info("the local is " + handler_input.request_envelope.request.locale + " " + str(is_spanish(handler_input)))
             _ =set_translation(handler_input)
             language_now = "SPANISH" if _ == lang_translations_sp.gettext else "ENGLISH"
             logger.info(language_now)
@@ -103,26 +94,20 @@ class WelcomeHandler(AbstractRequestHandler):
             logger.info("In WelcomeHandler {}".format(WELCOME_MESSAGE))
         except Exception as ex:
             logging.exception("error at start")
-        # if is_spanish(handler_input):
-        #     datasources2["gridListData"]["title"] = "Puedes preguntar sobre"
-        #     datasources2["gridListData"]["listItems"][0]["primaryText"] = "La mesa"
-        #     datasources2["gridListData"]["listItems"][1]["primaryText"] = "los fósforos"
-        #     datasources2["gridListData"]["listItems"][2]["primaryText"] = "Resultados"
-        #     datasources2["gridListData"]["listItems"][3]["primaryText"] = "Equipos"
-        #     datasources2["gridListData"]["listItems"][4]["primaryText"] = "Puntos por semana"
-        #     datasources2["gridListData"]["listItems"][5]["primaryText"] = "Descenso"
-        #     datasources2["gridListData"]["listItems"][6]["primaryText"] = "Sábanas limpias"
-        #     datasources2["gridListData"]["listItems"][7]["primaryText"] = "Faltas"
-        #     datasources2["gridListData"]["listItems"][8]["primaryText"] = "Metas"
-        #     datasources2["gridListData"]["listItems"][9]["primaryText"] = "Diferencia de goles"
 
         
         load_suggestions(handler_input)
         speech, card_text = load_stats_ng(handler_input, 1, "prevWeekFixtures", "  ", "  ", "  ", 0, 2, 1, "")
+        if is_spanish(handler_input):
+            str1 = speech.replace("beat", "vencer").replace("lost to", "perdió ante").replace("drew", "Empate")
+            speech = str1
         speech2, card_text2 = load_stats_ng(handler_input, 1, "fixtures2", ' versus ', ' at ', "  ", 0, 2, 1, "")
         welcome = WELCOME_MESSAGE + _(',, The last result was {} and the next match is {},, ').format(speech,speech2)
         set_time_zone(handler_input)
-        
+
+        #logger.info("about to call results_visual")
+        #results_visual(handler_input)
+
         if get_supported_interfaces(handler_input).alexa_presentation_apl is not None:
             logger.info("this device has a screen")
             response = boto3.client("cloudwatch").put_metric_data(
@@ -605,7 +590,7 @@ sb.add_request_handler(AddAllTeamsIntentHandler())
 sb.add_exception_handler(CatchAllExceptionHandler())
 
 # TODO: Uncomment the following lines of code for request, response logs.
-sb.add_global_request_interceptor(RequestLogger())
+#sb.add_global_request_interceptor(RequestLogger())
 #sb.add_global_response_interceptor(ResponseLogger())
 
 # Handler name that is used on AWS lambda
@@ -624,8 +609,9 @@ def find_team_index(team_id):
 
 
 def finish(handler_input):
-    goodbyes = ["see you later", "thank you", "ok, see you next time", "see you around the league", "Catch ya later",
-                "Take it easy","ta ta","take care","cheers","ok, I'm out"]
+    _ =set_translation(handler_input)
+    goodbyes = [_("see you later"), _("thank you"), _("ok, see you next time"), _("see you around the league"), _("Catch ya later"),
+                _("Take it easy"), _("ta ta"), _("take care"), _("cheers"), _("ok, I'm out")]
     if get_supported_interfaces(handler_input).alexa_presentation_apl is not None:
         return (
             handler_input.response_builder
