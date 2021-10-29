@@ -14,10 +14,11 @@ from ask_sdk_model.interfaces.alexa.presentation.apl import (SetValueCommand, Ex
 from ask_sdk_core.utils.viewport import get_viewport_profile
 import logging
 from statshandlers import goal_hander, cleansheets_handler, foul_handler, yellowcard_handler, redcard_handler, touches_handler, tackles_handler, referees_handler
+from statshandlers import load_stats_ng
 from statshandlers import results_handler, fixtures_handler, table_handler, relegation_handler, team_handler,  team_results_or_fixtures, table_data, reload_main_table_as_needed
 from statshandlers import NAME_INDEX,GOAL_DIFF_INDEX, find_team_index,load_combined_stats, load_two_stats
-from shared import extra_cmd_prompts,  doc, noise, noise2, noise3, noise_max_millis 
-from shared import noise2_max_millis, noise3_max_millis, datasources2, datasourcessp, test_speach_data, noise_data, teamsdatasource, foo_table
+from shared import extra_cmd_prompts,  doc, noise, noise2, noise3, noise_max_millis, real_results_table 
+from shared import noise2_max_millis, noise3_max_millis, datasources2, datasourcessp, test_speach_data, noise_data, teamsdatasource, foo_table, results_table
 from linechartdata import linedata
 import boto3
 from random import randrange
@@ -33,6 +34,28 @@ logger.setLevel(logging.DEBUG)
 TOKEN = "buttontoken"
 TICK_WIDTH = 3.0
 
+'''
+ButtonEventHandler
+go_home
+special_shorten
+results_visual
+fix_logo_name
+fixtures_visual
+table
+goaldifference
+get_goal_difference_url
+yellow_red
+savepercent
+get_save_percent_url
+goals_shots
+get_goals_shots_url
+get_line_chart_url
+do_line_graph
+get_team_points_and_max_points
+AddTeamIntentHandler
+RemoveTeamIntentHandler
+add_or_delete_team
+'''
         
 class ButtonEventHandler(AbstractRequestHandler):
     def can_handle(self, handler_input):
@@ -97,6 +120,7 @@ class ButtonEventHandler(AbstractRequestHandler):
 
         if first_arg == "goBack":
             return(go_home(handler_input))
+            
         if first_arg == "table":
             return(table(handler_input))
         
@@ -108,6 +132,11 @@ class ButtonEventHandler(AbstractRequestHandler):
             if get_supported_interfaces(handler_input).alexa_presentation_apl is not None:
                 return yellow_red(handler_input)
 
+        if first_arg == "fixtures":
+            return fixtures_visual(handler_input)
+            
+        if first_arg == "results":
+            return results_visual(handler_input)
             
         if first_arg == "teams":
             this_profile = str(get_viewport_profile(handler_input.request_envelope))
@@ -189,9 +218,149 @@ def go_home(handler_input):
     else:
         return(handler_input.response_builder.speak(_("This device does not have a screen, what can we help you with")).ask(_("what can we help you with")).response)
 
+
+def special_shorten(name):
+    if name == "Southampton":
+        return "Southmptn"
+    return name
+
+
+def results_visual(handler_input):
+    LOGO1 = 0
+    TEAM1 = 1
+    SCORE = 2
+    TEAM2 = 3
+    LOGO2 = 4
+    CFPREFIX = "https://duy7y3nglgmh.cloudfront.net/"
+    try:
+        s3 = boto3.client("s3")
+        bucket = "bpltables"
+        resp = s3.get_object(Bucket=bucket, Key="prevWeekFixtures")
+        body_str = resp['Body'].read().decode("utf-8")
+        n = body_str.split("\n")
+        
+        for index in range(0,10):
+            logger.info(n[index])
+            one_result = n[index].split(',')
+            logger.info(str(one_result))
+            one_result[0] = one_result[0].replace(" lost to", "").replace(" beat", "").replace(" drew","")
+            one_result[1] = one_result[1].replace(" to ", "-")
+            team1 = one_result[0]
+            team2 = one_result[2]
+            score = one_result[1]
+            logger.info(f"team1:{team1} score:{score} team2:{team2}")
+            
+            real_results_table["dataTable"]["properties"]["rows"][index]["cells"][LOGO1]["text"] = CFPREFIX + fix_logo_name(team1) + ".png"
+            real_results_table["dataTable"]["properties"]["rows"][index]["cells"][TEAM1]["text"] = team1
+            real_results_table["dataTable"]["properties"]["rows"][index]["cells"][SCORE]["text"] = score
+            real_results_table["dataTable"]["properties"]["rows"][index]["cells"][TEAM2]["text"] = team2
+            real_results_table["dataTable"]["properties"]["rows"][index]["cells"][LOGO2]["text"] = CFPREFIX + fix_logo_name(team2) + ".png"
+    except Exception as ex:
+        logger.info("hit exception")
+        logger.error(ex)        
+
+    return (
+        handler_input.response_builder
+            .speak(wrap_language(handler_input, _("Here are the results, scroll down and press Back to return")))
+            .set_should_end_session(False)          
+            .add_directive( 
+              APLRenderDocumentDirective(
+                token = "developer-provided-string",
+                    document = {
+                        "type" : "Link",
+                        "src"  : "doc://alexa/apl/documents/resultstable"
+                    },
+                    datasources = real_results_table 
+              )
+            ).response
+        )
+        
+def fix_logo_name(name):
+    logger.info(f"fix .{name}.")
+    if name == "Leicester":
+        return ("LeicesterCity")
+    elif name == "Wolverhampton":
+        return "WolverhamptonWanderers"
+    elif (name == "WestHam") or (name == "West Ham"):
+        logger.info("returning WestHamUnited")
+        return "WestHamUnited"
+    elif name == "Leeds":
+        return "LeedsUnited"
+    elif name == "Newcastle":
+        return "NewcastleUnited"
+    elif name == "Tottenham":
+        return "TottenhamHotspur"
+    elif name == "Brighton":
+        return "BrightonAndHoveAlbion"
+    elif " " in name:
+        return name.replace(" ", "")
+    else:
+        return name
+
+        
+def fixtures_visual(handler_input):
+    try:
+        logger.info("at fixtures_visual")
+        _ = set_translation(handler_input)
+        response = boto3.client("cloudwatch").put_metric_data(
+            Namespace='PremierLeague',
+            MetricData=[{'MetricName': 'InvocationsWithScreen','Timestamp': datetime.now(),'Value': 1,},]
+        )
+    
+        table_index = 0
+        speech, ignore = load_stats_ng(handler_input, 11, "fixtures2", ".", ".", ";", 0, 2, 1, "")
+        first_split = speech.split(";")
+        for s in first_split:
+        	for s2 in s.split(","):
+        		if(len(s2) > 0):
+        			if('.' not in s2):
+        			    logger.info("setting date:"+s2)
+        			    results_table["dataTable"]["properties"]["rows"][table_index]["backgroundColor"] = "grey"
+        			    date_split = x = s2[1:].split(' ')
+        			    results_table["dataTable"]["properties"]["rows"][table_index]["cells"][0]["text"] = date_split[0]
+        			    results_table["dataTable"]["properties"]["rows"][table_index]["cells"][2]["text"] = date_split[1]
+        			    results_table["dataTable"]["properties"]["rows"][table_index]["cells"][1]["text"] = date_split[2]
+        			    logger.info("setting a date " + s2 + " at index " + str(table_index))
+        			    table_index += 1
+        			else:
+        				line = ""
+        				results_table["dataTable"]["properties"]["rows"][table_index]["backgroundColor"] = "purple"
+        				sub_index = 0
+        				for s3 in s2.split('.'):
+        				    s3 = s3.replace('"', '').replace("oh clock", "00")
+        				    if sub_index == 2:
+        				        s3 = s3.replace(" ", ":")
+        				    results_table["dataTable"]["properties"]["rows"][table_index]["cells"][sub_index]["text"] = s3
+        				    results_table["dataTable"]["properties"]["rows"][table_index]["cells"][sub_index]["fontSize"] = "5vh"
+        				    logger.info("setting a team or time" + " at index " + str(table_index))
+        				    sub_index += 1
+        	table_index += 1
+    except Exception as ex:
+        logger.info("hit exception")
+        logger.error(ex)        
+
+    logger.info("at end of fixtures_visual")
+    return (
+        handler_input.response_builder
+            .speak(wrap_language(handler_input, _("Here are the fixtures, press Back to return")))
+            .set_should_end_session(False)          
+            .add_directive( 
+              APLRenderDocumentDirective(
+                token = "developer-provided-string",
+                    document = {
+                        "type" : "Link",
+                        "src"  : "doc://alexa/apl/documents/table2"
+                    },
+                    datasources = results_table 
+              )
+            ).response
+        )
+        
+    
 def table(handler_input):
     _ = set_translation(handler_input)
-    get_progressive_response(handler_input)
+    logger.info("at table chart")
+    #get_progressive_response(handler_input)
     response = boto3.client("cloudwatch").put_metric_data(
         Namespace='PremierLeague',
         MetricData=[{'MetricName': 'InvocationsWithScreen','Timestamp': datetime.now(),'Value': 1,},]
@@ -201,23 +370,35 @@ def table(handler_input):
     try:
         logger.info(str(short_names))
         for index in range(0, 20):
-            foo_table["dataTable"]["properties"]["rows"][index][0] = str(index)
-            logger.info(f"name:{table_data[index][0].strip()}. short_name {short_names.get(table_data[index][0].strip())}")
+            foo_table["dataTable"]["properties"]["rows"][index]["cells"][0]["text"] = str(index+1)
+            #logger.info(f"name:{table_data[index][0].strip()}. short_name {short_names.get(table_data[index][0].strip())}")
             
-            foo_table["dataTable"]["properties"]["rows"][index][1] = short_names.get(table_data[index][0].strip(),  table_data[index][0])
-            foo_table["dataTable"]["properties"]["rows"][index][2] = str(table_data[index][1])
-            foo_table["dataTable"]["properties"]["rows"][index][3] = str(table_data[index][2])
-            logger.info("2")
-            foo_table["dataTable"]["properties"]["rows"][index][4] = str(table_data[index][3])
-            foo_table["dataTable"]["properties"]["rows"][index][5] = str(table_data[index][4])
-            foo_table["dataTable"]["properties"]["rows"][index][6] = str(table_data[index][5])
-            foo_table["dataTable"]["properties"]["rows"][index][7] = str(table_data[index][6])
-            foo_table["dataTable"]["properties"]["rows"][index][8] = str(table_data[index][7])
-            foo_table["dataTable"]["properties"]["rows"][index][9] = str(table_data[index][8])
+            foo_table["dataTable"]["properties"]["rows"][index]["cells"][1]["text"] = special_shorten(short_names.get(table_data[index][0].strip(),  table_data[index][0]))
+            foo_table["dataTable"]["properties"]["rows"][index]["cells"][2]["text"] = str(table_data[index][1])
+            foo_table["dataTable"]["properties"]["rows"][index]["cells"][3]["text"] = str(table_data[index][2])
+            foo_table["dataTable"]["properties"]["rows"][index]["cells"][4]["text"] = str(table_data[index][3])
+            foo_table["dataTable"]["properties"]["rows"][index]["cells"][5]["text"] = str(table_data[index][4])
+            foo_table["dataTable"]["properties"]["rows"][index]["cells"][6]["text"] = str(table_data[index][5])
+            foo_table["dataTable"]["properties"]["rows"][index]["cells"][7]["text"] = str(table_data[index][6])
+            foo_table["dataTable"]["properties"]["rows"][index]["cells"][8]["text"] = str(table_data[index][7])
+            foo_table["dataTable"]["properties"]["rows"][index]["cells"][9]["text"] = str(table_data[index][8])
     except Exception as ex:
         logger.info("hit exception")
         logger.error(ex)        
 
+    logger.info("about to translate column headers " + _("Points"))
+    try:
+        foo_table["dataTable"]["back"] = _("Back")
+        foo_table["dataTable"]["properties"]["headings"][1] = _("Team")
+        foo_table["dataTable"]["properties"]["headings"][2] = _("Games")
+        foo_table["dataTable"]["properties"]["headings"][3] = _("wins")
+        foo_table["dataTable"]["properties"]["headings"][4] = _("draws")
+        foo_table["dataTable"]["properties"]["headings"][5] = _("losses")
+        foo_table["dataTable"]["properties"]["headings"][9] = _("Points")
+    except Exception as ex:
+        logger.info("hit exception")
+        logger.error(ex)        
+    
     logger.info(str(foo_table))
     return (
         handler_input.response_builder
@@ -235,24 +416,24 @@ def table(handler_input):
             ).response
         )
 
-def get_progressive_response(handler_input):
-    try:
-        request_id_holder = handler_input.request_envelope.request.request_id
-        directive_header = Header(request_id=request_id_holder)
-        speech = SpeakDirective(speech="Getting the table")
-        directive_request = SendDirectiveRequest(header=directive_header, directive=speech)
-        directive_service_client = handler_input.service_client_factory.get_directive_service()
-        directive_service_client.enqueue(directive_request)
-    except Exception as ex:
-        logger.info("hit exception")
-        logger.error(ex)        
+# def get_progressive_response(handler_input):
+#     try:
+#         request_id_holder = handler_input.request_envelope.request.request_id
+#         directive_header = Header(request_id=request_id_holder)
+#         speech = SpeakDirective(speech="Getting the table")
+#         directive_request = SendDirectiveRequest(header=directive_header, directive=speech)
+#         directive_service_client = handler_input.service_client_factory.get_directive_service()
+#         directive_service_client.enqueue(directive_request)
+#     except Exception as ex:
+#         logger.info("hit exception")
+#         logger.error(ex)        
 
 
 
                 
 def goaldifference(handler_input):
     _ = set_translation(handler_input)
-    ds = get_goal_difference_url()
+    ds = get_goal_difference_url(handler_input)
     response = boto3.client("cloudwatch").put_metric_data(
         Namespace='PremierLeague',
         MetricData=[{'MetricName': 'InvocationsWithScreen','Timestamp': datetime.now(),'Value': 1,},]
@@ -278,7 +459,8 @@ def goaldifference(handler_input):
             ).response
         )
 
-def get_goal_difference_url():
+def get_goal_difference_url(handler_input):
+    _ = set_translation(handler_input)
     qc = QuickChart()
     qc.width = 500
     qc.height = 300
@@ -305,7 +487,7 @@ def get_goal_difference_url():
     }
     dict["data"]["labels"] = names
     dict["data"]["datasets"][0]["data"] = gds
-    dict["data"]["datasets"][0]["label"] = "Goal Differences"
+    dict["data"]["datasets"][0]["label"] = _("Goal Differences")
     dict["data"]["datasets"][0]["backgroundColor"] = 12345
     dict["data"]["datasets"][0]["borderColor"] = 12345
     dict["data"]["datasets"][0]["borderWidth"] = 1
@@ -390,7 +572,7 @@ def get_save_percent_url(handler_input, label1, label2, title, filename):
                 "datasets": [
                     {
                         "label": label1,
-                        "backgroundColor": 'rgb(75, 192, 192)',
+                        "backgroundColor": 'rgb(75, 192, 192)' if filename == "savepercent" else "yellow",
                         "stack": "Stack 0",
                         "data":[]
                     },
