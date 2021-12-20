@@ -58,10 +58,17 @@
                                     "type": "Container",
                                     "direction": "row",
                                     "justifyContent": "spaceAround",
-                                    "data": "${data}",
+                                    "data": "${data.cells}",
+                                    "bind": [
+                                        {
+                                            "name": "backgroundColor",
+                                            "value": "${data.backgroundColor}"
+                                        }
+                                    ],
                                     "items": [
                                         {
                                             "type": "Frame",
+                                            "backgroundColor": "${backgroundColor}",
                                             "width": "${viewport.width / 10}",
                                             "borderColor": "#fff",
                                             "borderWidth": 0,
@@ -70,7 +77,7 @@
                                                 "width": "100%",
                                                 "fontSize": "3vh",
                                                 "textAlign": "center",
-                                                "text": "${data}"
+                                                "text": "${data.text}"
                                             }
                                         }
                                     ]
@@ -80,7 +87,7 @@
                         {
                             "type": "AlexaButton",
                             "paddingLeft": "@marginLeft",
-                            "buttonText": "Go Back",
+                            "buttonText": "${payload.dataTable.back}",
                             "id": "idForThisButton",
                             "primaryAction": {
                                 "type": "SendEvent",
@@ -89,7 +96,6 @@
                                 ]
                             }
                         }
-                        
                     ]
                 }
             }
