@@ -18,14 +18,17 @@ from statshandlers import load_stats_ng
 from statshandlers import results_handler, fixtures_handler, table_handler, relegation_handler, team_handler,  team_results_or_fixtures, table_data, reload_main_table_as_needed
 from statshandlers import NAME_INDEX,GOAL_DIFF_INDEX, find_team_index,load_combined_stats, load_two_stats
 from shared import extra_cmd_prompts,  doc, noise, noise2, noise3, noise_max_millis, real_results_table 
-from shared import noise2_max_millis, noise3_max_millis, datasources2, datasourcessp, test_speach_data, noise_data, teamsdatasource, foo_table, results_table
+from shared import noise2_max_millis, noise3_max_millis, datasources2, datasourcessp, test_speach_data, noise_data, teamsdatasource, foo_table, results_table, championship_table
+from shared import other_leagues
 from linechartdata import linedata
 import boto3
+import json
 from random import randrange
 from QuickChart import QuickChart
 from datetime import datetime
-from statshandlers import wrap_language, set_translation, is_spanish
-
+from statshandlers import wrap_language, set_translation, is_spanish, day_of_week_trans,month_trans, load_champ_table, champ_table
+import traceback
+import copy
 
 bucket = "bpltables"
 
@@ -74,6 +77,21 @@ class ButtonEventHandler(AbstractRequestHandler):
         
         first_arg = handler_input.request_envelope.request.arguments[0]
         logger.info(f"first_arg was {first_arg}")
+        response = boto3.client("cloudwatch").put_metric_data(
+            Namespace='PremierLeague',
+            MetricData=[{'MetricName': 'InvocationsWithScreen','Timestamp': datetime.now(),'Value': 1,},]
+        )
+        boto3.client("cloudwatch").put_metric_data(
+                    Namespace='PremierLeague',
+                    MetricData=[
+                        {
+                            'MetricName': 'visualbuttons',
+                            'Dimensions': [{ 'Name': 'button','Value': first_arg},],
+                            'Value': 1,
+                            'Unit': 'Count'
+                        },
+                    ]
+                )
         
         if first_arg == 'radioButtonText':
             radio_button_id   = handler_input.request_envelope.request.arguments[1]['radioButtonId']
@@ -102,7 +120,10 @@ class ButtonEventHandler(AbstractRequestHandler):
 
                 set_value_command = SetValueCommand(component_id=button,object_property="checked",value=value)
                 button_commands.append(set_value_command)
-            return (handler_input.response_builder.speak(wrap_language(handler_input, _("Ok, we'll show you team {}")).format(radio_button_id)).add_directive(ExecuteCommandsDirective(token=TOKEN,commands=button_commands)).response)
+                direct_object = radio_button_id
+                if is_spanish(handler_input):
+                    direct_object = direct_object.replace("Fixtures","Encuentros").replace("Results","Resultados").replace("Form","Forma")
+            return (handler_input.response_builder.speak(wrap_language(handler_input, _("Ok, we'll show you team {}")).format(direct_object)).add_directive(ExecuteCommandsDirective(token=TOKEN,commands=button_commands)).response)
         
         if first_arg == "goaldifference":
             return(goaldifference(handler_input))
@@ -114,8 +135,20 @@ class ButtonEventHandler(AbstractRequestHandler):
             return(goals_shots(handler_input))
             
  
+        if first_arg == 'allteams':
+            load_group_to_line_chart(handler_input.attributes_manager.session_attributes, handler_input, 1, 20)
+            return(do_line_graph(handler_input))
+        if first_arg == 'topsix':
+            load_group_to_line_chart(handler_input.attributes_manager.session_attributes, handler_input, 0, 6)
+            return(do_line_graph(handler_input))
+        if first_arg == 'relzone':
+            load_group_to_line_chart(handler_input.attributes_manager.session_attributes, handler_input, 14, 20)
+            return(do_line_graph(handler_input))
+        if first_arg == 'midtable':
+            load_group_to_line_chart(handler_input.attributes_manager.session_attributes, handler_input, 6, 14)
+            return(do_line_graph(handler_input))
+            
         if first_arg == "line":
-            #return(load_and_output_graph(handler_input, linedata))
             return(do_line_graph(handler_input))
 
         if first_arg == "goBack":
@@ -124,6 +157,18 @@ class ButtonEventHandler(AbstractRequestHandler):
         if first_arg == "table":
             return(table(handler_input))
         
+        if first_arg == "championship":
+            return(championship_visual(handler_input))
+        
+        if first_arg == "bundesliga":
+            return(bundesliga_visual(handler_input))
+            
+        if first_arg == "laliga":
+            return(laliga_visual(handler_input, "laliga", "la liga"))
+            
+        if first_arg == "serie_a":
+            return(laliga_visual(handler_input, "serie_a", "serie eh"))
+
         if first_arg == "Leave a Review":
             handler_input.response_builder.speak("Scan this QR code with your phone to leave us a review, thank you!").ask(HELP_REPROMPT)
             return handler_input.response_builder.response
@@ -137,6 +182,26 @@ class ButtonEventHandler(AbstractRequestHandler):
             
         if first_arg == "results":
             return results_visual(handler_input)
+
+        if first_arg == "other_leagues":
+            logger.info("bring up secondary page")
+            other_leagues["gridListData"]["title"] = _("You can ask about ...")
+            return (
+                handler_input.response_builder
+                    .speak(wrap_language(handler_input, _("Here are the tables for other leagues")))
+                    .set_should_end_session(False)          
+                    .add_directive( 
+                      APLRenderDocumentDirective(
+                        token= TOKEN,
+                        document = {
+                            "type" : "Link",
+                            "token" : TOKEN,
+                            "src"  : "doc://alexa/apl/documents/GridList"
+                        },
+                        datasources = other_leagues 
+                      )
+                    ).response
+                )
             
         if first_arg == "teams":
             this_profile = str(get_viewport_profile(handler_input.request_envelope))
@@ -232,6 +297,7 @@ def results_visual(handler_input):
     TEAM2 = 3
     LOGO2 = 4
     CFPREFIX = "https://duy7y3nglgmh.cloudfront.net/"
+    _ = set_translation(handler_input)
     try:
         s3 = boto3.client("s3")
         bucket = "bpltables"
@@ -240,15 +306,15 @@ def results_visual(handler_input):
         n = body_str.split("\n")
         
         for index in range(0,10):
-            logger.info(n[index])
+            #logger.info(n[index])
             one_result = n[index].split(',')
-            logger.info(str(one_result))
+            #logger.info(str(one_result))
             one_result[0] = one_result[0].replace(" lost to", "").replace(" beat", "").replace(" drew","")
             one_result[1] = one_result[1].replace(" to ", "-")
             team1 = one_result[0]
             team2 = one_result[2]
             score = one_result[1]
-            logger.info(f"team1:{team1} score:{score} team2:{team2}")
+            #logger.info(f"team1:{team1} score:{score} team2:{team2}")
             
             real_results_table["dataTable"]["properties"]["rows"][index]["cells"][LOGO1]["text"] = CFPREFIX + fix_logo_name(team1) + ".png"
             real_results_table["dataTable"]["properties"]["rows"][index]["cells"][TEAM1]["text"] = team1
@@ -259,6 +325,8 @@ def results_visual(handler_input):
         logger.info("hit exception")
         logger.error(ex)        
 
+    real_results_table["dataTable"]["back"] = _("Back")
+    doc = _load_apl_document("resultstable.json")
     return (
         handler_input.response_builder
             .speak(wrap_language(handler_input, _("Here are the results, scroll down and press Back to return")))
@@ -266,10 +334,7 @@ def results_visual(handler_input):
             .add_directive( 
               APLRenderDocumentDirective(
                 token = "developer-provided-string",
-                    document = {
-                        "type" : "Link",
-                        "src"  : "doc://alexa/apl/documents/resultstable"
-                    },
+                    document = doc,
                     datasources = real_results_table 
               )
             ).response
@@ -302,44 +367,54 @@ def fixtures_visual(handler_input):
     try:
         logger.info("at fixtures_visual")
         _ = set_translation(handler_input)
-        response = boto3.client("cloudwatch").put_metric_data(
-            Namespace='PremierLeague',
-            MetricData=[{'MetricName': 'InvocationsWithScreen','Timestamp': datetime.now(),'Value': 1,},]
-        )
+        # response = boto3.client("cloudwatch").put_metric_data(
+        #     Namespace='PremierLeague',
+        #     MetricData=[{'MetricName': 'InvocationsWithScreen','Timestamp': datetime.now(),'Value': 1,},]
+        # )
     
         table_index = 0
-        speech, ignore = load_stats_ng(handler_input, 11, "fixtures2", ".", ".", ";", 0, 2, 1, "")
+        speech, ignore = load_stats_ng(handler_input, 13, "fixtures2", ".", ".", ";", 0, 2, 1, "")
         first_split = speech.split(";")
         for s in first_split:
         	for s2 in s.split(","):
         		if(len(s2) > 0):
         			if('.' not in s2):
-        			    logger.info("setting date:"+s2)
+        			    #logger.info("setting date:"+s2)
         			    results_table["dataTable"]["properties"]["rows"][table_index]["backgroundColor"] = "grey"
         			    date_split = x = s2[1:].split(' ')
-        			    results_table["dataTable"]["properties"]["rows"][table_index]["cells"][0]["text"] = date_split[0]
+        			    foo = day_of_week_trans(handler_input,date_split[0])
+        			    bar = month_trans(handler_input, foo)
+        			    month1 = day_of_week_trans(handler_input,date_split[2])
+        			    month2 = month_trans(handler_input,month1)
+        			    results_table["dataTable"]["properties"]["rows"][table_index]["cells"][0]["text"] = bar
         			    results_table["dataTable"]["properties"]["rows"][table_index]["cells"][2]["text"] = date_split[1]
-        			    results_table["dataTable"]["properties"]["rows"][table_index]["cells"][1]["text"] = date_split[2]
-        			    logger.info("setting a date " + s2 + " at index " + str(table_index))
+        			    results_table["dataTable"]["properties"]["rows"][table_index]["cells"][1]["text"] = month2
+        			    #logger.info("setting a date " + s2 + " at index " + str(table_index))
         			    table_index += 1
         			else:
         				line = ""
         				results_table["dataTable"]["properties"]["rows"][table_index]["backgroundColor"] = "purple"
         				sub_index = 0
+        				#logger.info(f"whole team line {s2}")
         				for s3 in s2.split('.'):
+        				    #logger.info(f"set team column {s3}")
         				    s3 = s3.replace('"', '').replace("oh clock", "00")
         				    if sub_index == 2:
         				        s3 = s3.replace(" ", ":")
+        				    #logger.info(f"Set team column {s3}")
         				    results_table["dataTable"]["properties"]["rows"][table_index]["cells"][sub_index]["text"] = s3
         				    results_table["dataTable"]["properties"]["rows"][table_index]["cells"][sub_index]["fontSize"] = "5vh"
-        				    logger.info("setting a team or time" + " at index " + str(table_index))
+        				    #logger.info("setting a team or time" + " at index " + str(table_index))
         				    sub_index += 1
         	table_index += 1
     except Exception as ex:
         logger.info("hit exception")
         logger.error(ex)        
-
+        traceback.print_exc()
     logger.info("at end of fixtures_visual")
+    results_table["dataTable"]["back"] = _("Back")
+    doc = _load_apl_document("table2.json")
+
     return (
         handler_input.response_builder
             .speak(wrap_language(handler_input, _("Here are the fixtures, press Back to return")))
@@ -347,11 +422,195 @@ def fixtures_visual(handler_input):
             .add_directive( 
               APLRenderDocumentDirective(
                 token = "developer-provided-string",
-                    document = {
-                        "type" : "Link",
-                        "src"  : "doc://alexa/apl/documents/table2"
-                    },
+                    document = doc,
                     datasources = results_table 
+              )
+            ).response
+        )
+
+ 
+def laliga_visual(handler_input, key, text):
+    bun_table = []
+    _ = set_translation(handler_input)
+    logger.info("at laliga table chart")
+    # response = boto3.client("cloudwatch").put_metric_data(
+    #     Namespace='PremierLeague',
+    #     MetricData=[{'MetricName': 'InvocationsWithScreen','Timestamp': datetime.now(),'Value': 1,},]
+    # )
+    s3 = boto3.client("s3")
+    resp = s3.get_object(Bucket="bpltables", Key=key)
+    body_str = resp['Body'].read().decode("utf-8")
+    x = body_str.split("\n")
+    team_index = 0
+    bar = copy.deepcopy(foo_table)
+    bar["dataTable"]["back"] = _("Back")
+    bar["dataTable"]["properties"]["headings"][1] = _("Team")
+    bar["dataTable"]["properties"]["headings"][2] = _("Games")
+    bar["dataTable"]["properties"]["headings"][3] = _("wins")
+    bar["dataTable"]["properties"]["headings"][4] = _("draws")
+    bar["dataTable"]["properties"]["headings"][5] = _("losses")
+    bar["dataTable"]["properties"]["headings"][9] = _("Points")
+
+    for team in x:
+        try:
+            #logger.info(f"about to do team {team_index}")
+            if team_index < 4:
+                bar["dataTable"]["properties"]["rows"][team_index]["backgroundColor"] = "green"
+            elif team_index < 6:
+                bar["dataTable"]["properties"]["rows"][team_index]["backgroundColor"] = "blue"
+            elif team_index > 16:
+                bar["dataTable"]["properties"]["rows"][team_index]["backgroundColor"] = "red"
+                
+            one_team = team.split(",")
+            bar["dataTable"]["properties"]["rows"][team_index]["cells"][0]["text"] = str(team_index+1)
+            bar["dataTable"]["properties"]["rows"][team_index]["cells"][1]["text"] = one_team[0]
+            bar["dataTable"]["properties"]["rows"][team_index]["cells"][2]["text"] = str(one_team[1])
+            bar["dataTable"]["properties"]["rows"][team_index]["cells"][3]["text"] = str(one_team[2])
+            bar["dataTable"]["properties"]["rows"][team_index]["cells"][4]["text"] = str(one_team[3])
+            bar["dataTable"]["properties"]["rows"][team_index]["cells"][5]["text"] = str(one_team[4])
+            bar["dataTable"]["properties"]["rows"][team_index]["cells"][6]["text"] = str(one_team[5])
+            bar["dataTable"]["properties"]["rows"][team_index]["cells"][7]["text"] = str(one_team[6])
+            bar["dataTable"]["properties"]["rows"][team_index]["cells"][8]["text"] = str(one_team[7])
+            bar["dataTable"]["properties"]["rows"][team_index]["cells"][9]["text"] = str(one_team[8])
+            team_index = team_index + 1
+            if team_index > 19:
+                break
+        except Exception as ex:
+            logger.info("hit exception")
+            logger.error(ex)
+    logger.info("about to do LaLiga or Seria A")
+    doc = _load_apl_document("table.json")
+    return (
+        handler_input.response_builder
+            .speak(wrap_language(handler_input,_("Here is the table, press Back to return")))  
+            .set_should_end_session(False)          
+            .add_directive( 
+              APLRenderDocumentDirective(
+                token = "developer-provided-string",
+                    document = doc,
+                    datasources = bar 
+              )
+            ).response
+        )
+    
+
+
+ 
+def bundesliga_visual(handler_input):
+    _ = set_translation(handler_input)
+    bun_table = []
+    _ = set_translation(handler_input)
+    logger.info("at bundesliga table chart")
+    # response = boto3.client("cloudwatch").put_metric_data(
+    #     Namespace='PremierLeague',
+    #     MetricData=[{'MetricName': 'InvocationsWithScreen','Timestamp': datetime.now(),'Value': 1,},]
+    # )
+    s3 = boto3.client("s3")
+    resp = s3.get_object(Bucket="bpltables", Key="bundesliga")
+    body_str = resp['Body'].read().decode("utf-8")
+    x = body_str.split("\n")
+    team_index = 0
+    bar = copy.deepcopy(foo_table)
+    del bar["dataTable"]["properties"]["rows"][18:]
+    bar["dataTable"]["back"] = _("Back")
+    bar["dataTable"]["properties"]["headings"][1] = _("Team")
+    bar["dataTable"]["properties"]["headings"][2] = _("Games")
+    bar["dataTable"]["properties"]["headings"][3] = _("wins")
+    bar["dataTable"]["properties"]["headings"][4] = _("draws")
+    bar["dataTable"]["properties"]["headings"][5] = _("losses")
+    bar["dataTable"]["properties"]["headings"][9] = _("Points")
+    
+    for team in x:
+        try:
+            #logger.info(f"about to do team {team_index}")
+            if team_index < 4:
+                bar["dataTable"]["properties"]["rows"][team_index]["backgroundColor"] = "green"
+            elif team_index < 6:
+                bar["dataTable"]["properties"]["rows"][team_index]["backgroundColor"] = "blue"
+            elif team_index == 15:
+                bar["dataTable"]["properties"]["rows"][team_index]["backgroundColor"] = "orange"
+            elif team_index > 15:
+                bar["dataTable"]["properties"]["rows"][team_index]["backgroundColor"] = "red"
+                
+            one_team = team.split(",")
+            bar["dataTable"]["properties"]["rows"][team_index]["cells"][0]["text"] = str(team_index+1)
+            bar["dataTable"]["properties"]["rows"][team_index]["cells"][1]["text"] = one_team[0]
+            bar["dataTable"]["properties"]["rows"][team_index]["cells"][2]["text"] = str(one_team[1])
+            bar["dataTable"]["properties"]["rows"][team_index]["cells"][3]["text"] = str(one_team[3])
+            bar["dataTable"]["properties"]["rows"][team_index]["cells"][4]["text"] = str(one_team[4])
+            bar["dataTable"]["properties"]["rows"][team_index]["cells"][5]["text"] = str(one_team[5])
+            bar["dataTable"]["properties"]["rows"][team_index]["cells"][6]["text"] = str(one_team[6])
+            bar["dataTable"]["properties"]["rows"][team_index]["cells"][7]["text"] = str(one_team[7])
+            bar["dataTable"]["properties"]["rows"][team_index]["cells"][8]["text"] = str(one_team[8])
+            bar["dataTable"]["properties"]["rows"][team_index]["cells"][9]["text"] = str(one_team[2])
+            team_index = team_index + 1
+            if team_index > 18:
+                break
+        except Exception as ex:
+            logger.info("hit exception")
+            logger.error(ex)        
+    doc = _load_apl_document("table.json")
+    return (
+        handler_input.response_builder
+            .speak(wrap_language(handler_input, _("Here is the table, press Back to return")))
+            .set_should_end_session(False)          
+            .add_directive( 
+              APLRenderDocumentDirective(
+                token = "developer-provided-string",
+                    document = doc,
+                    datasources = bar 
+              )
+            ).response
+        )
+
+   
+def championship_visual(handler_input):
+    _ = set_translation(handler_input)
+    logger.info("at championship table chart")
+    # response = boto3.client("cloudwatch").put_metric_data(
+    #     Namespace='PremierLeague',
+    #     MetricData=[{'MetricName': 'InvocationsWithScreen','Timestamp': datetime.now(),'Value': 1,},]
+    # )
+    load_champ_table()
+    logger.info("champ table loaded")
+    try:
+        championship_table["dataTable"]["back"] = _("Back")
+        championship_table["dataTable"]["properties"]["headings"][1] = _("Team")
+        championship_table["dataTable"]["properties"]["headings"][2] = _("Games")
+        championship_table["dataTable"]["properties"]["headings"][3] = _("wins")
+        championship_table["dataTable"]["properties"]["headings"][4] = _("draws")
+        championship_table["dataTable"]["properties"]["headings"][5] = _("losses")
+        championship_table["dataTable"]["properties"]["headings"][7] = _("Points")
+
+        for index in range(0, 24):
+            #logger.info(championship_table["dataTable"]["properties"]["rows"][index] )
+            #logger.info('got here')
+            championship_table["dataTable"]["properties"]["rows"][index]["cells"][0]["text"] = str(index+1)
+            logger.info('got here2')
+            championship_table["dataTable"]["properties"]["rows"][index]["cells"][1]["text"] = short_champ_names.get(champ_table[index][0])
+            championship_table["dataTable"]["properties"]["rows"][index]["cells"][2]["text"] = str(champ_table[index][1])
+            championship_table["dataTable"]["properties"]["rows"][index]["cells"][3]["text"] = str(champ_table[index][2])
+            championship_table["dataTable"]["properties"]["rows"][index]["cells"][4]["text"] = str(champ_table[index][3])
+            championship_table["dataTable"]["properties"]["rows"][index]["cells"][5]["text"] = str(champ_table[index][4])
+            championship_table["dataTable"]["properties"]["rows"][index]["cells"][6]["text"] = str(champ_table[index][5])
+            championship_table["dataTable"]["properties"]["rows"][index]["cells"][7]["text"] = str(champ_table[index][6])
+
+    except Exception as ex:
+        logger.info("hit exception")
+        logger.error(ex)        
+
+    #logger.info(str(championship_table))
+    doc = _load_apl_document("championshiptable.json")
+
+    return (
+        handler_input.response_builder
+            .speak(wrap_language(handler_input, _("Here is the table, press Back to return")))
+            .set_should_end_session(False)          
+            .add_directive( 
+              APLRenderDocumentDirective(
+                token = "developer-provided-string",
+                    document = doc,
+                    datasources = championship_table 
               )
             ).response
         )
@@ -360,11 +619,10 @@ def fixtures_visual(handler_input):
 def table(handler_input):
     _ = set_translation(handler_input)
     logger.info("at table chart")
-    #get_progressive_response(handler_input)
-    response = boto3.client("cloudwatch").put_metric_data(
-        Namespace='PremierLeague',
-        MetricData=[{'MetricName': 'InvocationsWithScreen','Timestamp': datetime.now(),'Value': 1,},]
-    )
+    # response = boto3.client("cloudwatch").put_metric_data(
+    #     Namespace='PremierLeague',
+    #     MetricData=[{'MetricName': 'InvocationsWithScreen','Timestamp': datetime.now(),'Value': 1,},]
+    # )
     reload_main_table_as_needed()
 
     try:
@@ -386,7 +644,7 @@ def table(handler_input):
         logger.info("hit exception")
         logger.error(ex)        
 
-    logger.info("about to translate column headers " + _("Points"))
+    #logger.info("about to translate column headers " + _("Points"))
     try:
         foo_table["dataTable"]["back"] = _("Back")
         foo_table["dataTable"]["properties"]["headings"][1] = _("Team")
@@ -399,22 +657,29 @@ def table(handler_input):
         logger.info("hit exception")
         logger.error(ex)        
     
-    logger.info(str(foo_table))
-    return (
-        handler_input.response_builder
-            .speak(wrap_language(handler_input, _("Here is the table, press Back to return")))
-            .set_should_end_session(False)          
-            .add_directive( 
-              APLRenderDocumentDirective(
-                token = "developer-provided-string",
-                    document = {
-                        "type" : "Link",
-                        "src"  : "doc://alexa/apl/documents/table"
-                    },
+    try:
+        doc = _load_apl_document("table.json")
+        #logger.info("TABLE.JSON " + str(doc))
+        return (
+            handler_input.response_builder
+                .speak("Here is the table, press Back to return")
+                .set_should_end_session(False)          
+                .add_directive( 
+                  APLRenderDocumentDirective(
+                    token = "developer-provided-string",
+                    document = doc,
                     datasources = foo_table 
-              )
-            ).response
-        )
+                  )
+                ).response
+            )
+    except Exception as ex:
+        logger.info("hit exception")
+        logger.error(ex)        
+
+
+def _load_apl_document(file_path):
+    with open(file_path) as f:
+        return json.load(f)
 
 # def get_progressive_response(handler_input):
 #     try:
@@ -434,10 +699,10 @@ def table(handler_input):
 def goaldifference(handler_input):
     _ = set_translation(handler_input)
     ds = get_goal_difference_url(handler_input)
-    response = boto3.client("cloudwatch").put_metric_data(
-        Namespace='PremierLeague',
-        MetricData=[{'MetricName': 'InvocationsWithScreen','Timestamp': datetime.now(),'Value': 1,},]
-    )
+    # response = boto3.client("cloudwatch").put_metric_data(
+    #     Namespace='PremierLeague',
+    #     MetricData=[{'MetricName': 'InvocationsWithScreen','Timestamp': datetime.now(),'Value': 1,},]
+    # )
 
     logger.info(ds)
     return (
@@ -452,7 +717,6 @@ def goaldifference(handler_input):
                     "token" : TOKEN,
                     "src"  : "doc://alexa/apl/documents/GoalDifference"
                 },
-               # datasources = {"source": {"url": ds}}
                 datasources = {"source": {"url": ds, "back": _("Back")}}
                     
               )
@@ -492,7 +756,7 @@ def get_goal_difference_url(handler_input):
     dict["data"]["datasets"][0]["borderColor"] = 12345
     dict["data"]["datasets"][0]["borderWidth"] = 1
     qc.config = str(dict).replace('12345', "function(context) {var index = context.dataIndex; var value = context.dataset.data[index];return value < 0 ? 'red' : 'blue';}")
-    logger.info(qc.config)
+    #logger.info(qc.config)
 
     ret_url = qc.get_short_url()
     return(ret_url)
@@ -501,10 +765,10 @@ def get_goal_difference_url(handler_input):
 def yellow_red(handler_input):
     _ = set_translation(handler_input)
     ds = get_save_percent_url(handler_input,_("Yellow Cards"), _("Red Cards"), _("Cards by Referees"), "yellow_red")
-    response = boto3.client("cloudwatch").put_metric_data(
-        Namespace='PremierLeague',
-        MetricData=[{'MetricName': 'InvocationsWithScreen','Timestamp': datetime.now(),'Value': 1,},]
-    )
+    # response = boto3.client("cloudwatch").put_metric_data(
+    #     Namespace='PremierLeague',
+    #     MetricData=[{'MetricName': 'InvocationsWithScreen','Timestamp': datetime.now(),'Value': 1,},]
+    # )
 
     logger.info(ds)
     return (
@@ -530,12 +794,12 @@ def yellow_red(handler_input):
 def savepercent(handler_input):
     _ = set_translation(handler_input)
     ds = get_save_percent_url(handler_input,_("Saves"), _("goals allowed"), _("Keeper Saves vs. Goals"), "savepercent")
-    response = boto3.client("cloudwatch").put_metric_data(
-        Namespace='PremierLeague',
-        MetricData=[{'MetricName': 'InvocationsWithScreen','Timestamp': datetime.now(),'Value': 1,},]
-    )
+    # response = boto3.client("cloudwatch").put_metric_data(
+    #     Namespace='PremierLeague',
+    #     MetricData=[{'MetricName': 'InvocationsWithScreen','Timestamp': datetime.now(),'Value': 1,},]
+    # )
 
-    logger.info(ds)
+    #logger.info(ds)
     return (
         handler_input.response_builder
             .speak(wrap_language(handler_input, _("Here are Keeper saves versus goals, press Back to return")))
@@ -602,7 +866,7 @@ def get_save_percent_url(handler_input, label1, label2, title, filename):
     qc.config = str(dict)
 
     ret_url = qc.get_short_url()
-    logger.info(f"the long url is {qc.get_url()}")
+    #logger.info(f"the long url is {qc.get_url()}")
     return(ret_url)
 
 
@@ -610,13 +874,13 @@ def goals_shots(handler_input):
     logger.info("at goals_shots")
     _ = set_translation(handler_input)
     ds = get_goals_shots_url(handler_input)
-    logger.info(f"ds in goals_shots is {ds}")
-    response = boto3.client("cloudwatch").put_metric_data(
-        Namespace='PremierLeague',
-        MetricData=[{'MetricName': 'InvocationsWithScreen','Timestamp': datetime.now(),'Value': 1,},]
-    )
+    #logger.info(f"ds in goals_shots is {ds}")
+    # response = boto3.client("cloudwatch").put_metric_data(
+    #     Namespace='PremierLeague',
+    #     MetricData=[{'MetricName': 'InvocationsWithScreen','Timestamp': datetime.now(),'Value': 1,},]
+    # )
 
-    logger.info(ds)
+    #logger.info(ds)
     return (
         handler_input.response_builder
             .speak(wrap_language(handler_input, _("Here are goals vs shots, press Back to return")))
@@ -646,7 +910,7 @@ def get_goals_shots_url(handler_input):
     qc.width = 500
     qc.height = 300
     names, goals, shots = load_two_stats(5,"goals_shots")
-    logger.info("after load_two_")
+    #logger.info("after load_two_")
     dict = {
         "type": "bar", 
         "data": {
@@ -678,26 +942,36 @@ def get_goals_shots_url(handler_input):
             }
       }    
     }
-    logger.info("after set dict")
+    #logger.info("after set dict")
     dict["data"]["labels"] = names
     dict["data"]["datasets"][0]["data"] = goals
     dict["data"]["datasets"][1]["data"] = shots
     qc.config = str(dict)
 
     ret_url = qc.get_short_url()
-    logger.info(f"the long url is {qc.get_url()}")
+    #logger.info(f"the long url is {qc.get_url()}")
     return(ret_url)
 
+
+def load_group_to_line_chart(session_attr, handler_input, min, max):
+    try:
+        reset_line_chart(session_attr)
+        reload_main_table_as_needed()
+        for index in range(min,max):
+            session_attr[table_data[index][NAME_INDEX].strip()] = True
+    except Exception as ex:
+         logger.error(ex)    
+
+def reset_line_chart(session_attr):
+    for key in team_colors:
+        session_attr[key] = None
+    
 def get_line_chart_url(session_attr, handler_input):
     _ = set_translation(handler_input)
     #only do this the first time through ....
     if session_attr.get("first_time_graph", None) is None:
-        session_attr["Liverpool"] = True
+        load_group_to_line_chart(session_attr, handler_input,0,6)        
         session_attr["first_time_graph"] = True
-    response = boto3.client("cloudwatch").put_metric_data(
-        Namespace='PremierLeague',
-        MetricData=[{'MetricName': 'InvocationsWithScreen','Timestamp': datetime.now(),'Value': 1,},]
-    )
 
     qc = QuickChart()
     qc.width = 500
@@ -751,11 +1025,11 @@ def get_line_chart_url(session_attr, handler_input):
                 team_dict = {'label': short_names[team], 'backgroundColor': rgb, 'borderColor':rgb, 'borderDash': team_dash.get(team,[]), 'fill': False, 'data': []}
             for point in points:
                 team_dict['data'].append(point)
-            logger.info(f"team is {str(team_dict)}")
+            #logger.info(f"team is {str(team_dict)}")
             dict['data']['datasets'].append(team_dict)
     qc.config = dict
     ret_url = qc.get_short_url()
-    logger.info(qc.config)
+    #logger.info(qc.config)
     return(ret_url)
 
 team_dash = {
@@ -781,6 +1055,7 @@ team_dash = {
     "Wolverhampton Wanderers": [1,1] 
     
 }
+
 team_colors = {
     "Arsenal": "#EF0107",
     "Aston Villa": "#95BFE5", 
@@ -803,11 +1078,12 @@ team_colors = {
     "West Ham United": "#7A263A", 
     "Wolverhampton Wanderers": "#FDB913" 
 }
+
 def do_line_graph(handler_input):
     _ = set_translation(handler_input)
     ds = get_line_chart_url(handler_input.attributes_manager.session_attributes, handler_input)
 
-    logger.info(ds)
+    #logger.info(ds)
     return (
         handler_input.response_builder
             .speak(wrap_language(handler_input, _("Team points by week, say add or remove team")))
@@ -818,7 +1094,7 @@ def do_line_graph(handler_input):
                 document = {
                     "type" : "Link",
                     "token" : TOKEN,
-                    "src"  : "doc://alexa/apl/documents/GoalDifference"
+                    "src"  : "doc://alexa/apl/documents/RealLineChart"
                 },
                 datasources = {"source": {"url": ds, "back": _("Back")}}
                     
@@ -916,30 +1192,38 @@ def add_or_delete_team(handler_input, mode):
                 .speak(response + reprompt).response
         )
     prompt = None
-    
+    logger.info("at add_or_delete_team")
     slot = get_slot(handler_input, "plteam")
+    logger.info("after get_slot")
+    
     if slot.resolutions is not None:    # there is only one slot value
-        dict = slot.resolutions.to_dict()
-        logger.info("-------")
-        logger.info(str(dict['resolutions_per_authority'][0]['status']['code']))
-        if dict['resolutions_per_authority'][0]['status']['code'] == "ER_SUCCESS_NO_MATCH":
-            logger.info("no matching team found")
-            handler_input.response_builder.speak("Sorry, I could not find that team, please say add or remove team").ask("Please try again")
-            return handler_input.response_builder.response
-        logger.info("Team name is: " + dict['resolutions_per_authority'][0]["values"][0]["value"]["name"])
-        team = dict['resolutions_per_authority'][0]["values"][0]["value"]["name"]
-        session_attr = handler_input.attributes_manager.session_attributes
-        if mode == "add":
-            session_attr[team] = True
-            #prompt = "added {} to the graph".format(team)
-        else:
-            session_attr.pop(team, "not found ")
-            logger.info(f"removed {team} from the session and its still there?: {team_in_chart(session_attr,team)}")
-            #prompt = "removed {} from the graph".format(team)
-        handler_input.attributes_manager.session_attributes = session_attr
+        try:
+            dict = slot.resolutions.to_dict()
+            logger.info("Single slot")
+            logger.info(str(dict['resolutions_per_authority'][0]['status']['code']))
+            if dict['resolutions_per_authority'][0]['status']['code'] == "ER_SUCCESS_NO_MATCH":
+                logger.info("no matching team found")
+                handler_input.response_builder.speak(_("Sorry, I could not find that team, please say add or remove team")).ask("Please try again")
+                return handler_input.response_builder.response
+            logger.info("Team name is: " + dict['resolutions_per_authority'][0]["values"][0]["value"]["name"])
+            team = dict['resolutions_per_authority'][0]["values"][0]["value"]["name"]
+            session_attr = handler_input.attributes_manager.session_attributes
+            if mode == "add":
+                session_attr[team] = True
+                #prompt = "added {} to the graph".format(team)
+            else:
+                session_attr.pop(team, "not found ")
+                logger.info(f"removed {team} from the session and its still there?: {team_in_chart(session_attr,team)}")
+                #prompt = "removed {} from the graph".format(team)
+            handler_input.attributes_manager.session_attributes = session_attr
+        except Exception as ex:
+            logger.info("exception getting slot")
+            logger.info(ex)
+      
         return((do_line_graph(handler_input)))   #(do_line_graph(handler_input))
 
     else:  # there are multiple slot values
+        logger.info("Multiple slot")
         session_attr = handler_input.attributes_manager.session_attributes
         prompt = mode + "ed "
         if slot.slot_value is not None:
@@ -954,6 +1238,10 @@ def add_or_delete_team(handler_input, mode):
                     session_attr.pop(team, "not found 2")
                     logger.info(f"removed {team} to the session and its still there?: {team_in_chart(session_attr,team)}")
                     prompt += team
+        else:
+            logger.info("no matching team found")
+            handler_input.response_builder.speak(_("Sorry, I could not understand the team name, please say add or remove team")).ask("Please try again")
+            return handler_input.response_builder.response
         handler_input.attributes_manager.session_attributes = session_attr
         return((do_line_graph(handler_input)))
         
@@ -979,4 +1267,30 @@ short_names = {
     "Watford"           : "Watford",
     "West Ham United"    : "West Ham",
     "Wolverhampton Wanderers" : "Wolves"
-}        
+}    
+short_champ_names = {
+"Bournemouth" : "Bournemouth",
+"Fulham" : "Fulham",
+"West Bromwich Albion" : "West Brom",
+"Coventry City" : "Coventry",
+"Stoke City" : "Stoke",
+"Queens Park Rangers" : "QPR",
+"Blackburn Rovers" : "Blackburn",
+"Huddersfield Town" : "Huddersfield",
+"Millwall" : "Millwall",
+"Blackpool" : "Blockpool",
+"Luton Town" : "Luton",
+"Swansea City" : "Swansea",
+"Nottingham Forest" : "Forest",
+"Middlesbrough" : "Middlebrough",
+"Birmingham City" : "Birminghm",
+"Reading" : "Reading",
+"Preston North End" : "Preston",
+"Sheffield United" : "Sheffield",
+"Bristol City" : "Bristol",
+"Cardiff City" : "Cardiff",
+"Peterborough United" : "Peterborough",
+"Hull City" : "Hull",
+"Barnsley" : "Barneley",
+"Derby County" : "Derby"    
+}
