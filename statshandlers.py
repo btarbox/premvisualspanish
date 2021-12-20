@@ -23,6 +23,7 @@ import requests
 from shared import extra_cmd_prompts, doc, noise, noise2, noise3, noise_max_millis, results_table 
 from shared import noise2_max_millis, noise3_max_millis, datasources2, datasourcessp, test_speach_data, noise_data, teamsdatasource
 from datetime import datetime
+import spanishnumber
 #from multimedia import yellow_red
 import gettext
 lang_translations_en = gettext.translation('base', localedir='locales', languages=['en'])
@@ -98,15 +99,18 @@ def is_spanish(handler_input):
 
 
 def set_translation(handler_input):
-    logger.info("at set_translation {}".format(handler_input.request_envelope.request.locale))
+    #logger.info("at set_translation {}".format(handler_input.request_envelope.request.locale))
     if is_spanish(handler_input):
         _ = lang_translations_sp.gettext
     else:        
         _ = lang_translations_en.gettext
         
-    logger.info("returning _ after set_translation {}".format(_))
+    #logger.info("returning _ after set_translation {}".format(_))
     return _
     
+def has_screen(handler_input):
+    return (get_supported_interfaces(handler_input).alexa_presentation_apl is not None)
+
     
 class GoalsHandler(AbstractRequestHandler):
     """Handler for GoldenBootIntent."""
@@ -247,6 +251,7 @@ def output_right_directive(handler_input, the_text, image_url, noise, noise_max)
             )).response)
     else:
         card = StandardCard(title=_("Premier League"), text=strip_emotions(the_text), image=Image(small_image_url=image_url, large_image_url=image_url))
+        logger.info("Outputing StandardCard")
         logger.info(f"output_right_directive audio {the_text}, {image_url}, {noise}, {noise_max} {noise_start}.")
         response = boto3.client("cloudwatch").put_metric_data(
             Namespace='PremierLeague',
@@ -376,9 +381,7 @@ def referees_handler(handler_input):
     _ = set_translation(handler_input)
     if "referees" in extra_cmd_prompts:
         del extra_cmd_prompts["referees"]
-    # if get_supported_interfaces(handler_input).alexa_presentation_apl is not None:
-    #     return yellow_red(handler_input)
-        
+
     referees_phrases = [_("the most used referees are, "),_("the referees who've called the most games are, "),_("the referees in charge of the most games are,  ")]
     intro = random_phrase(0,2, referees_phrases)
     
@@ -416,7 +419,8 @@ def results_handler(handler_input):
     
     speech, card_text = load_stats_ng(handler_input, 5, "prevWeekFixtures", "  ", "  ", "  ", 0, 2, 1, "")
     if is_spanish(handler_input):
-        str1 = speech.replace("beat", "vencer").replace("lost to", "perdió ante").replace("drew", "Empate")
+        card_text = card_text.replace("beat", "vencer").replace("lost to", "perdió ante").replace("drew", "Empate").replace(" to ", " por ")
+        str1 = speech.replace("beat", "vencer").replace("lost to", "perdió ante").replace("drew", "Empate").replace(" to ", " por ")
         speech = str1
     speech = intro + speech + ',' + _('Would you like to hear more?')
     image_url = "https://duy7y3nglgmh.cloudfront.net/tackles.png"
@@ -449,11 +453,31 @@ def fixtures_handler(handler_input):
     handler_input.attributes_manager.session_attributes = session_attr
     
     speech, card_text = load_stats_ng(handler_input, 5, "fixtures2", _(" versus "), _(" at "), "  ", 0, 2, 1, "")
+    speech = day_of_week_trans(handler_input,speech)
+    speech = month_trans(handler_input,speech)
     speech = intro + speech + _('Would you like to hear more?')
     image_url = "https://duy7y3nglgmh.cloudfront.net/tackles.png"
     
     return output_right_directive(handler_input, speech, image_url, noise2, noise2_max_millis)
 
+
+def month_trans(handler_input, src_text):
+    logger.info("translating " + src_text + ".")
+    months = [("January","Enero"),("February","Enero"), ("March","Marzo"), 
+            ("April","Abril"), ("May","Mayo"), ("June","Junio"), ("July","Julio"), 
+            ("August","Agosto"), ("September","Septiembre"), ("October","Octubre"), ("November","Noviembre"), ("December","Diciembre")]
+    if is_spanish(handler_input):
+        for month in months:
+            src_text = src_text.replace(month[0], month[1])
+    logger.info("got " + src_text + ".")
+    return src_text
+    
+    
+def day_of_week_trans(handler_input, src_text):
+    if is_spanish(handler_input):
+        for day in ["Monday", "Tuesday"]:
+            src_text = src_text.replace("Monday","Lunes").replace("Tuesday","Martes").replace("Wednesday", "Miércoles").replace("Thursday", "Jueves").replace("Friday","Viernes").replace("Saturday", "Sábado").replace("Sunday","Domingo")
+    return src_text
 
 class TableHandler(AbstractRequestHandler):
     """Handler for TableIntent."""
@@ -509,14 +533,14 @@ def build_team_speech(handler_input, this_team_index, team_name):
     _ = set_translation(handler_input)
     logger.info(f"building team speak for {team_name} at index {this_team_index}")
     speech = _("You asked about ") + team_name + _(", their form is ")
-    form = say_place(this_team_index + 1, handler_input) + _(" with ") + pluralize(table_data[this_team_index][WINS_INDEX], "win", 's') + ", "
-    form = form + pluralize(table_data[this_team_index][DRAWS_INDEX], _(" draw"), 's') + ", "
-    form = form + pluralize(table_data[this_team_index][LOSSES_INDEX], _(" loss"), 'es') + ", "
-    form = form + pluralize(table_data[this_team_index][GOALS_FOR_INDEX], _(" goal"), 's') + _(" scored, ")
-    form = form + pluralize(table_data[this_team_index][GOALS_AGAINST_INDEX], _(" goal"), 's') + _(" allowed, ")
+    form = say_place(this_team_index + 1, handler_input) + _(" with ") + pluralize(handler_input,table_data[this_team_index][WINS_INDEX], _("win"), 's') + ", "
+    form = form + pluralize(handler_input,table_data[this_team_index][DRAWS_INDEX], _(" draw"), 's') + ", "
+    form = form + pluralize(handler_input,table_data[this_team_index][LOSSES_INDEX], _(" loss"), 'es') + ", "
+    form = form + pluralize(handler_input,table_data[this_team_index][GOALS_FOR_INDEX], _(" goal"), 's') + _(" scored, ")
+    form = form + pluralize(handler_input,table_data[this_team_index][GOALS_AGAINST_INDEX], _(" goal"), 's') + _(" allowed, ")
     form = form + _(" for a goal difference of ") + table_data[this_team_index][GOAL_DIFF_INDEX] + _(", and ")
-    form = form + pluralize(table_data[this_team_index][POINTS_INDEX], _(" point"), 's') + ", "
-    form = get_excitement_prefix(this_team_index) + form + get_excitement_suffix()
+    form = form + pluralize(handler_input,table_data[this_team_index][POINTS_INDEX], _(" point"), 's') + ", "
+    form = get_excitement_prefix(this_team_index, handler_input) + form + get_excitement_suffix(handler_input)
     card_text = strip_emotions(speech + form)
     new_intent = _(", you can also ask for fixtures or results for {}").format(team_name)
     speech = speech + form + new_intent
@@ -582,20 +606,64 @@ def build_relegation_fragment(handler_input):
     for index in range(17,20):
         logger.info("index {}".format(index))
         logger.info("name {}".format(table_data[index][NAME_INDEX]))
-        logger.info("points {}".format(pluralize(table_data[index][POINTS_INDEX], 'point', 's')))
+        logger.info("points {}".format(pluralize(handler_input,table_data[index][POINTS_INDEX], 'point', 's')))
         
-        relegation_fragment = relegation_fragment + say_place(index+1, handler_input) + " " + table_data[index][NAME_INDEX] + _(" with ") + pluralize(table_data[index][POINTS_INDEX], _('point'), 's') + ', '
+        relegation_fragment = relegation_fragment + say_place(index+1, handler_input) + " " + table_data[index][NAME_INDEX] + _(" with ") + pluralize(handler_input,table_data[index][POINTS_INDEX], _(' point'), 's') + ', '
     return '<amazon:emotion name="disappointed" intensity="high">' + relegation_fragment + '</amazon:emotion>'
 
+
+def ordinal(num):
+    ordinals =  [
+        "primero",
+        "segundo",
+        "tercero",
+        "cuarto",
+        "quinto",
+        "sexto",
+        "séptimo",
+        "octavo",
+        "noveno",
+        "décimo",
+        "undécimo",
+        "duodécimo",
+        "decimotercero",
+        "decimocuarto",
+        "decimoquinto",
+        "decimosexto",
+        "decimoséptimo",
+        "decimoctavo",
+        "decimonoveno",
+        "vigésimo",
+        "vigésimo primero",
+        "vigésimo segundo",
+        "vigésimo tercero",
+        "vigésimo cuarto"
+        ]
+    return ordinals[num]
+    
+def build_spanish_table_fragment(table_index, handler_input):
+    _ = set_translation(handler_input)
+    table_fragment = " "
+    reload_main_table_as_needed()
+    for index in range(table_index, table_index+5):
+        #table_fragment = table_fragment + say_place(index+1, handler_input) + " " + table_data[index][NAME_INDEX] + _(" with ") + pluralize(handler_input,table_data[index][POINTS_INDEX], _(' point'), 's') + ', '
+        table_fragment = table_fragment + table_data[index][NAME_INDEX] + " que está " + ordinal(index) + " con " + table_data[index][POINTS_INDEX] + ' puntos, '
+
+    returned_str = get_excitement_prefix(table_index, handler_input) + table_fragment + get_excitement_suffix(handler_input)
+    table_index = table_index + 5
+    return returned_str
 
 
 def build_table_fragment(table_index, handler_input):
     _ = set_translation(handler_input)
+    if is_spanish(handler_input):
+        return build_spanish_table_fragment(table_index, handler_input)
     table_fragment = ""
     reload_main_table_as_needed()
     for index in range(table_index, table_index+5):
-        table_fragment = table_fragment + say_place(index+1, handler_input) + " " + table_data[index][NAME_INDEX] + _(" with ") + pluralize(table_data[index][POINTS_INDEX], _(' point'), 's') + ', '
-    returned_str = get_excitement_prefix(table_index) + table_fragment + get_excitement_suffix()
+        table_fragment = table_fragment + say_place(index+1, handler_input) + " " + table_data[index][NAME_INDEX] + _(" with ") + pluralize(handler_input,table_data[index][POINTS_INDEX], _(' point'), 's') + ', '
+
+    returned_str = get_excitement_prefix(table_index,handler_input) + table_fragment + get_excitement_suffix(handler_input)
     table_index = table_index + 5
     return returned_str
 
@@ -609,7 +677,8 @@ def say_place(table_index, handler_input):
     elif table_index == 3:
         return _("third place")
     else:
-        return str(table_index) + "th place"
+        place = "th place" if is_spanish(handler_input)==False else " poner"
+        return str(table_index) + place
 
     
 def reload_main_table_as_needed():
@@ -640,6 +709,28 @@ def load_main_table():
             break
     table_index = 0
     logger.info("loaded {} teams into table_data".format(len(table_data)))
+    
+
+champ_table = []
+
+def load_champ_table():
+    s3 = boto3.client("s3")
+    logger.info("about to open chap table")
+    resp = s3.get_object(Bucket="bpltables", Key="championship_table")
+    logger.info("back from open champ table")
+    body_str = resp['Body'].read().decode("utf-8")
+    logger.info("converted streaming_body to string")
+    x = body_str.split("\n")
+    team_index = 0
+
+    for team in x:
+        one_team = team.split(",")
+        champ_table.append(one_team)
+        team_index = team_index + 1
+        if team_index > 23:
+            break
+    table_index = 0
+    logger.info("loaded {} teams into champ_table".format(len(champ_table)))
 
 
 def random_phrase(low, high, phrases):
@@ -652,7 +743,7 @@ def random_prompt(handler_input):
     return variedPrompts[randrange(0, 3)] + suggest(handler_input);
   
     
-def pluralize(count, noun, ess):
+def pluralize(handler_input,count, noun, ess):
     if int(count) == 1:
         return count + " " + noun
     else:
@@ -695,17 +786,27 @@ def suggest(handler_input):
 
 
 def strip_emotions(str):
+    #logger.info(f"strip_emotions {str}")
     try:
-        index = str.index("<")
-        index2 = str.index(">")
-        str2 = str[:index] + str[index2+1:]
-        return str2.replace("</amazon:emotion>","")
+        # index = str.index("<")
+        # index2 = str.index(">")
+        # str2 = str[:index] + str[index2+1:]
+        # return str2.replace("</amazon:emotion>","")
+        index = 1
+        while index > -1:
+            index = str.find("<")
+            index2 = str.find(">") + 1
+            str = str.replace(str[index:index2],"")
+        #logger.info(f"strip_emotions {str}")
+        return str
     except:
         return str
 
-def get_excitement_prefix(index):
+def get_excitement_prefix(index,handler_input):
     ''' speak with excitement or disappointment but with some randomness '''
-    
+
+    if is_spanish(handler_input):   # emotions only supported for English voices 
+        return ""
     high_or_medium = "high" if randrange(0,2)==0 else "medium"
     medium_or_low = "medium" if randrange(0,2)==0 else "low"
     
@@ -719,7 +820,9 @@ def get_excitement_prefix(index):
         return '<amazon:emotion name="disappointed" intensity="high">'.format(high_or_medium)
         
         
-def get_excitement_suffix():
+def get_excitement_suffix(handler_input):
+    if is_spanish(handler_input):   # emotions only supported for English voices 
+        return ""
     return '</amazon:emotion>'
 
 
@@ -766,7 +869,7 @@ def load_stats(number, filename, article1, article2, article3, firstCol, secondC
         new_text = get_one_line(oneCard[firstCol], article1, oneCard[secondCol], article2, third, article3)
         say = say + ", " + new_text
         card_text = card_text + new_text + "\n"
-        logger.info("building at index {} {}".format(index, say))
+        #logger.info("building at index {} {}".format(index, say))
     return (say, strip_emotions(card_text))
 
 
@@ -884,6 +987,11 @@ def load_stats_ng(handler_input, number, filename, article1, article2, article3,
     except:
         logging.info("RAN OFF END OF LIST OF FIXTURES OR RESULTS")
         say += _(" that is the end of the list. ")
+    if is_spanish(handler_input):
+        if has_screen(handler_input):
+            say = say.replace("oh clock", "00")
+        else:
+            say = say.replace("oh clock", "")
     return (say, strip_emotions(card_text))            
 
 
@@ -970,6 +1078,12 @@ def team_results_or_fixtures(handler_input, team_name, results_or_fixtures):
     speech, card_text = load_stats_ng(handler_input, 5, results_or_fixtures, "  ", "  ", "  ", 0, 2, 1, team_name)
     speech = intro + speech + ',' + _("press a button")
     card = SimpleCard("Results", card_text)
+    if is_spanish(handler_input):
+        str1 = speech.replace("beat", "vencer").replace("lost to", "perdió ante").replace("drew", "Empate").replace(" to ", " por ")
+        str1 = day_of_week_trans(handler_input,str1)
+        str1 = month_trans(handler_input, str1)
+        speech = str1
+
     if get_supported_interfaces(handler_input).alexa_presentation_apl is not None:
         card = None
     handler_input.response_builder.ask(speech).set_card(card).add_directive(
