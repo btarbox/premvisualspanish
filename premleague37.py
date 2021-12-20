@@ -40,11 +40,11 @@ from statshandlers import load_suggestions, suggest, strip_emotions, get_excitem
 from statshandlers import get_excitement_suffix,normalize_score, get_one_line, GoalsHandler, random_phrase, build_table_fragment
 from statshandlers import random_prompt, pluralize, load_stats, ListTeamNamesHandler, CleanSheetsHandler,FoulsHandler, RelegationHandler
 from statshandlers import RedCardHandler, YellowCardHandler, TouchesHandler, TacklesHandler, RefereesHandler
-from statshandlers import ResultsHandler, FixturesHandler,TableHandler, load_stats_ng, set_time_zone,load_combined_stats
+from statshandlers import ResultsHandler, FixturesHandler,TableHandler, load_stats_ng, set_time_zone,load_combined_stats, day_of_week_trans
 from multimedia import ButtonEventHandler, AddTeamIntentHandler, RemoveTeamIntentHandler, go_home, get_line_chart_url, do_line_graph
 from datetime import datetime
 import gettext
-from statshandlers import wrap_language, set_translation, is_spanish
+from statshandlers import wrap_language, set_translation, is_spanish,month_trans, output_right_directive
 lang_translations_en = gettext.translation('base', localedir='locales', languages=['en'])
 lang_translations_en.install()
 lang_translations_sp = gettext.translation('base', localedir='locales', languages=['es'])
@@ -70,6 +70,9 @@ logger.setLevel(logging.DEBUG)
 TOKEN = "buttontoken"
 TICK_WIDTH = 3.0
 
+def _load_apl_document(file_path):
+    with open(file_path) as f:
+        return json.load(f)
 
 class WelcomeHandler(AbstractRequestHandler):
     """Handler for StartIntent."""
@@ -79,16 +82,20 @@ class WelcomeHandler(AbstractRequestHandler):
 
     def handle(self, handler_input):
         try:
+
             logger.info("the local is " + handler_input.request_envelope.request.locale + " " + str(is_spanish(handler_input)))
             _ =set_translation(handler_input)
-            language_now = "SPANISH" if _ == lang_translations_sp.gettext else "ENGLISH"
-            logger.info(language_now)
+            doc = _load_apl_document("table.json")
+            logger.info("TABLE.JSON " + str(doc))
+            #language_now = "SPANISH" if _ == lang_translations_sp.gettext else "ENGLISH"
+            #logger.info(language_now)
             #tr = lang_translations_en.gettext
             #_ = lang_translations_en.gettext
-            logger.info("english: {}".format(lang_translations_en.gettext('Welcome to PremierLeague')))
-            logger.info("spanish: {}".format(lang_translations_sp.gettext('Welcome to PremierLeague')))
-            logger.info("underbr: {}".format(_('Welcome to PremierLeague')))
-            #logger.info("tr:      {}".format(tr('Welcome to PremierLeague')))
+            # logger.info("english: {}".format(lang_translations_en.gettext('Welcome to PremierLeague')))
+            # logger.info("spanish: {}".format(lang_translations_sp.gettext('Welcome to PremierLeague')))
+            # logger.info("underbr: {}".format(_('Welcome to PremierLeague')))
+            # #logger.info("tr:      {}".format(tr('Welcome to PremierLeague')))
+            logger.info(f"Language is spanish:{is_spanish(handler_input)}")
 
             WELCOME_MESSAGE = _('Welcome to PremierLeague')
             logger.info("In WelcomeHandler {}".format(WELCOME_MESSAGE))
@@ -99,14 +106,19 @@ class WelcomeHandler(AbstractRequestHandler):
         load_suggestions(handler_input)
         speech, card_text = load_stats_ng(handler_input, 1, "prevWeekFixtures", "  ", "  ", "  ", 0, 2, 1, "")
         if is_spanish(handler_input):
-            str1 = speech.replace("beat", "vencer").replace("lost to", "perdió ante").replace("drew", "Empate")
+            str1 = speech.replace("beat", "ganó").replace("lost to", "perdió ante").replace("drew", "Empate").replace(" to ", " a ")
             speech = str1
-        speech2, card_text2 = load_stats_ng(handler_input, 1, "fixtures2", ' versus ', ' at ', "  ", 0, 2, 1, "")
-        welcome = WELCOME_MESSAGE + _(',, The last result was {} and the next match is {},, ').format(speech,speech2)
-        set_time_zone(handler_input)
+        speech2, card_text2 = load_stats_ng(handler_input, 1, "fixtures2", _(' versus '), _(' at '), "  ", 0, 2, 1, "")
+        speech2 = day_of_week_trans(handler_input, speech2)
+        speech2 = month_trans(handler_input,speech2)
 
-        #logger.info("about to call results_visual")
-        #results_visual(handler_input)
+        x = randrange(0,100)
+        logger.info(f"****  Is english {not is_spanish(handler_input)} rand {x}  { (x < 33)}")
+        if (not is_spanish(handler_input)) and (x < 33):
+            welcome = WELCOME_MESSAGE + ",, now available in Spanish,,"
+        else:
+            welcome = WELCOME_MESSAGE + _(',, The last result was {} and the next match is {},, ').format(speech,speech2)
+        set_time_zone(handler_input)
 
         if get_supported_interfaces(handler_input).alexa_presentation_apl is not None:
             logger.info("this device has a screen")
@@ -147,7 +159,7 @@ class WelcomeHandler(AbstractRequestHandler):
                 MetricData=[{'MetricName': 'InvocationsWithOutScreen','Timestamp': datetime.now(),'Value': 1,},]
             )
             speech = wrap_language(handler_input, welcome + _(' Say get table, or say a team name '))
-            handler_input.response_builder.speak(speech).ask(speech).set_card(SimpleCard("Hello PremierLeague", speech))
+            handler_input.response_builder.speak(speech).ask(speech).set_card(SimpleCard("Hello PremierLeague", strip_emotions(speech)))
             return handler_input.response_builder.response
 
 
@@ -156,8 +168,6 @@ class TeamHandler(AbstractRequestHandler):
     """Handler for TeamIntent."""
 
     def can_handle(self, handler_input):
-        #logger.info("in can_handle TeamHandler")
-        #logger.info("intent_name is " + get_intent_name(handler_input))
         return (is_intent_name("TeamIntent")(handler_input))
 
     def handle(self, handler_input):
@@ -167,7 +177,6 @@ class TeamHandler(AbstractRequestHandler):
         
 class AddAllTeamsIntentHandler(AbstractRequestHandler):
     def can_handle(self, handler_input):
-        #logger.info("in can_handle AddAllTeamIntentHandler")
         return (is_intent_name("AddAllTeamsIntent")(handler_input))
 
     def handle(self, handler_input):
@@ -196,7 +205,12 @@ class AddAllTeamsIntentHandler(AbstractRequestHandler):
             handler_input.attributes_manager.session_attributes = session_attr
             return(do_line_graph(handler_input))
         else:
-            return(handler_input.response_builder.speak("This device does not have a screen, what can we help you with").ask("what can we help you with").response)
+            if is_spanish(handler_input):
+                logger.info("Spanish: no screen from AddAllTeams")
+                return(handler_input.response_builder.speak("Este dispositivo no tiene pantalla, con qué podemos ayudarte").ask("Este dispositivo no tiene pantalla, con qué podemos ayudarte").response)
+            else:
+                logger.info("E: no screen from AddAllTeams")
+                return(handler_input.response_builder.speak("This device does not have a screen, what can we help you with").ask("what can we help you with").response)
         
 
 
@@ -242,11 +256,11 @@ class TeamResultsHandler(AbstractRequestHandler):
     """Handler for TeamResultsIntent."""
 
     def can_handle(self, handler_input):
-        #logger.info("in can_handle TeamResultsHandler")
         return (is_intent_name("TeamResultsIntent")(handler_input))
 
     def handle(self, handler_input):
         logger.info("In TeamResultsHandler")
+        _ = set_translation(handler_input)
         if "teamresults" in extra_cmd_prompts:
             del extra_cmd_prompts["teamresults"]
         try:    
@@ -258,7 +272,7 @@ class TeamResultsHandler(AbstractRequestHandler):
                 team_name = dict['resolutions_per_authority'][0]["values"][0]["value"]["name"]
         
             logger.info(f"asked about {team_name}")
-            intro = "recent results for {} were".format(team_name)
+            intro = _("recent results for {} were").format(team_name)
             session_attr = handler_input.attributes_manager.session_attributes
             handler_input.attributes_manager.session_attributes = session_attr
             
@@ -266,32 +280,38 @@ class TeamResultsHandler(AbstractRequestHandler):
             speech = intro + speech + ',' + random_prompt(handler_input)
         except Exception as ex:
             logger.info(ex)
-            speech = "Sorry we did not understand what team you asked about "
+            speech = wrap_language(handler_input,_("Sorry, we did not understand, can you try again?"))
             card_text = speech
         card = SimpleCard("Results", card_text)
         if get_supported_interfaces(handler_input).alexa_presentation_apl is not None:
             card = None
+
+        if is_spanish(handler_input):
+            str1 = speech.replace("beat", "vencer").replace("lost to", "perdió ante").replace("drew", "Empate")
+            speech = str1
+
+        return output_right_directive(handler_input, speech, None, noise3, noise3_max_millis)
         
-        handler_input.response_builder.ask(speech).set_card(card).add_directive(
-              APLARenderDocumentDirective(
-                token= "tok",
-                document = {"type" : "Link", "src"  : doc},
-                datasources = {"user": {"name": speech},"crowd": {"noise": noise3,"start": str(randrange(0, noise3_max_millis))}
-                }
-                )
-            )
-        return handler_input.response_builder.response
+        # handler_input.response_builder.ask(speech).set_card(card).add_directive(
+        #       APLARenderDocumentDirective(
+        #         token= "tok",
+        #         document = {"type" : "Link", "src"  : doc},
+        #         datasources = {"user": {"name": speech},"crowd": {"noise": noise3,"start": str(randrange(0, noise3_max_millis))}
+        #         }
+        #         )
+        #     )
+        # return handler_input.response_builder.response
 
 
 class TeamFixturesHandler(AbstractRequestHandler):
     """Handler for TeamFixturesIntent."""
 
     def can_handle(self, handler_input):
-        #logger.info("in can_handle TeamFixturesHandler")
         return (is_intent_name("TeamFixturesIntent")(handler_input))
 
     def handle(self, handler_input):
         logger.info("In TeamFixturesHandler")
+        _ = set_translation(handler_input)
         set_time_zone(handler_input)        
         if "teamfixtures" in extra_cmd_prompts:
             del extra_cmd_prompts["teamfixtures"]
@@ -303,41 +323,31 @@ class TeamFixturesHandler(AbstractRequestHandler):
                 team_id = dict['resolutions_per_authority'][0]["values"][0]["value"]["id"]
                 team_name = dict['resolutions_per_authority'][0]["values"][0]["value"]["name"]
             else:
-                handler_input.response_builder.speak("Sorry, we did not understand what team you asked about, try again").ask(HELP_REPROMPT)
+                handler_input.response_builder.speak(_("Sorry we did not understand what team you asked about ")).ask(HELP_REPROMPT)
                 return handler_input.response_builder.response
     
             logger.info(f"asked about {team_name}")
-            intro = "upcoming fixtures for {} are".format(team_name)
+            intro = _("upcoming fixtures for {} are").format(team_name)
             session_attr = handler_input.attributes_manager.session_attributes
             handler_input.attributes_manager.session_attributes = session_attr
             
-            #speech, card_text = load_stats_ng(5, "fixtures2", "  ", "  ", "  ", 0, 2, 1, team_name)
-            speech, card_text = load_stats_ng(handler_input, 5, "fixtures2", " versus ", " ", "  ", 0, 2, -1, team_name)
+            speech, card_text = load_stats_ng(handler_input, 5, "fixtures2", _(" versus "), " ", "  ", 0, 2, -1, team_name)
             speech = intro + speech + ',' + random_prompt(handler_input)
         except Exception as ex:
             logger.info(ex)
-            speech = "Sorry we did not understand what team you asked about "
+            speech = wrap_language(handler_input, _("Sorry, we did not understand, can you try again?"))
             card_text = speech
         card = SimpleCard("Fixtures", card_text)
         if get_supported_interfaces(handler_input).alexa_presentation_apl is not None:
             card = None
         
-        handler_input.response_builder.ask(speech).set_card(card).add_directive(
-              APLARenderDocumentDirective(
-                token= "tok",
-                document = {"type" : "Link", "src"  : doc},
-                datasources = {"user": {"name": speech},"crowd": {"noise": noise,"start": str(randrange(0, noise_max_millis))}
-                }
-                )
-            )
-        return handler_input.response_builder.response
+        return output_right_directive(handler_input, speech, None, noise, noise_max_millis)
 
 
 class YesHandler(AbstractRequestHandler):
     """Handler for YesIntent."""
 
     def can_handle(self, handler_input):
-        #logger.info("in can_handle YesHandler")
         return (is_intent_name("AMAZON.YesIntent")(handler_input))
 
     def handle(self, handler_input):
@@ -366,7 +376,8 @@ class YesHandler(AbstractRequestHandler):
             card = SimpleCard("Premier League", card_text)
             if get_supported_interfaces(handler_input).alexa_presentation_apl is not None:
                 card = None
-            handler_input.response_builder.ask(wrap_language(handler_input,speech)).set_card(card).add_directive(
+            speech = wrap_language(handler_input,speech)
+            handler_input.response_builder.ask(speech).set_card(card).add_directive(
               APLARenderDocumentDirective(token= "tok",document = {"type" : "Link", "src"  : doc},
                 datasources = {"user": {"name": speech},"crowd": {"noise": noise,"start": str(randrange(0, noise_max_millis))}
                 }
@@ -378,7 +389,7 @@ class YesHandler(AbstractRequestHandler):
             fixture_index = session_attr.get("fixture_index", 0)
             session_attr["fixture_index"] = fixture_index + 5
             handler_input.attributes_manager.session_attributes = session_attr
-            speech, card_text = load_stats_ng(handler_input, 5, "fixtures2", " versus ", " ", "  ", 0, 2, 1, "", fixture_index)
+            speech, card_text = load_stats_ng(handler_input, 5, "fixtures2", _(" versus "), " ", "  ", 0, 2, 1, "", fixture_index)
             speech = intro + speech + _('Would you like to hear more?')
             card = SimpleCard("Premier League", card_text)
             if get_supported_interfaces(handler_input).alexa_presentation_apl is not None:
@@ -398,10 +409,16 @@ class YesHandler(AbstractRequestHandler):
             session_attr["results_index"] = results_index + 5
             handler_input.attributes_manager.session_attributes = session_attr
             speech, card_text = load_stats_ng(handler_input, 5, "prevWeekFixtures", "  ", "  ", "  ", 0, 2, 1, "", results_index)
+            if is_spanish(handler_input):
+                card_text = card_text.replace("beat", "vencer").replace("lost to", "perdió ante").replace("drew", "Empate").replace(" to ", " por ")
+                str1 = speech.replace("beat", "vencer").replace("lost to", "perdió ante").replace("drew", "Empate").replace(" to ", " por ")
+                speech = str1
+
             speech = intro + speech + _('Would you like to hear more?')
             card = SimpleCard("Premier League", card_text)
             if get_supported_interfaces(handler_input).alexa_presentation_apl is not None:
                 card = None
+            logger.info("about to give next 5 results, possibly wrap_language")
             handler_input.response_builder.ask(speech).set_card(card).add_directive(
               APLARenderDocumentDirective(
                 token= "tok",
@@ -417,7 +434,6 @@ class NoHandler(AbstractRequestHandler):
     """Handler for NoIntent."""
 
     def can_handle(self, handler_input):
-        #logger.info("in can_handle NoHandler")
         return (is_intent_name("AMAZON.NoIntent")(handler_input))
 
     def handle(self, handler_input):
@@ -438,33 +454,34 @@ class MainScreenIntentHandler(AbstractRequestHandler):
 class HelpIntentHandler(AbstractRequestHandler):
     """Handler for Help Intent."""
     def can_handle(self, handler_input):
-        # type: (HandlerInput) -> bool
         return is_intent_name("AMAZON.HelpIntent")(handler_input)
 
     def handle(self, handler_input):
         _ =set_translation(handler_input)
         HELP_MESSAGE = _('Say get table, a team name or nickname, red cards, yellow cards, clean sheets, golden boot, fixtures, results, relegation, referees, stadiums by name, touches, fouls and tackles')
-        # type: (HandlerInput) -> Response
         logger.info("In HelpIntentHandler")
 
-        handler_input.response_builder.speak(HELP_MESSAGE).ask(HELP_REPROMPT).set_card(SimpleCard(SKILL_NAME, HELP_MESSAGE))
+        if get_supported_interfaces(handler_input).alexa_presentation_apl is not None:
+            handler_input.response_builder.speak(wrap_language(handler_input,HELP_MESSAGE)).ask(wrap_language(handler_input,HELP_REPROMPT))
+        else:
+            handler_input.response_builder.speak(wrap_language(handler_input,HELP_MESSAGE)).ask(wrap_language(handler_input,HELP_REPROMPT)).set_card(SimpleCard(SKILL_NAME, wrap_language(handler_input,HELP_MESSAGE)))
         return handler_input.response_builder.response
 
 
 class CancelOrStopIntentHandler(AbstractRequestHandler):
     """Single handler for Cancel and Stop Intent."""
     def can_handle(self, handler_input):
-        # type: (HandlerInput) -> bool
         return (is_intent_name("AMAZON.CancelIntent")(handler_input) or
                 is_intent_name("AMAZON.StopIntent")(handler_input))
 
     def handle(self, handler_input):
-        # type: (HandlerInput) -> Response
-        _ =set_translation(handler_input)
-        logger.info("In CancelOrStopIntentHandler")
-        STOP_MESSAGE = _('Okay, hope to see you next time!')
-
-        handler_input.response_builder.speak(STOP_MESSAGE)
+        # _ =set_translation(handler_input)
+        # logger.info("In CancelOrStopIntentHandler")
+        # STOP_MESSAGE = _('Okay, hope to see you next time!')
+        # if is_spanish(handle_input):
+        #     STOP_MESSAGE = wrap_language(handler_input, STOP_MESSAGE) 
+        # logger.info("at CancelOrStopIntentHandler " + STOP_MESSAGE)
+        # handler_input.response_builder.speak(STOP_MESSAGE)
         return(finish(handler_input))
 
 
@@ -476,7 +493,6 @@ class FallbackIntentHandler(AbstractRequestHandler):
     so it is safe to deploy on any locale.
     """
     def can_handle(self, handler_input):
-        # type: (HandlerInput) -> bool
         return is_intent_name("AMAZON.FallbackIntent")(handler_input)
 
     def handle(self, handler_input):
@@ -493,11 +509,9 @@ class FallbackIntentHandler(AbstractRequestHandler):
 class SessionEndedRequestHandler(AbstractRequestHandler):
     """Handler for Session End."""
     def can_handle(self, handler_input):
-        # type: (HandlerInput) -> bool
         return is_request_type("SessionEndedRequest")(handler_input)
 
     def handle(self, handler_input):
-        # type: (HandlerInput) -> Response
         logger.info("In SessionEndedRequestHandler")
 
         logger.info("Session ended reason: {}".format(handler_input.request_envelope.request.reason))
@@ -610,12 +624,13 @@ def find_team_index(team_id):
 
 def finish(handler_input):
     _ =set_translation(handler_input)
+    logger.info("at finish")
     goodbyes = [_("see you later"), _("thank you"), _("ok, see you next time"), _("see you around the league"), _("Catch ya later"),
                 _("Take it easy"), _("ta ta"), _("take care"), _("cheers"), _("ok, I'm out")]
     if get_supported_interfaces(handler_input).alexa_presentation_apl is not None:
         return (
             handler_input.response_builder
-                .speak(goodbyes[randrange(0, 10)])
+                .speak(wrap_language(handler_input, goodbyes[randrange(0, 10)]))
                 .set_should_end_session(True)          
                 .add_directive( 
                   APLRenderDocumentDirective(
@@ -632,9 +647,11 @@ def finish(handler_input):
         the_text = goodbyes[randrange(0, 10)]
         if (randrange(0,100) == 42):
             the_text = "if you're enjoying this, a review would really be appreciated, thank you"
-            response = boto3.client("cloudwatch").put_metric_data(
-                Namespace='PremierLeague',
-                MetricData=[{'MetricName': 'AskForReview','Timestamp': datetime.now(),'Value': 1,},]
-            )
-
+            if is_spanish(handler_input):
+                the_text = "Si estás disfrutando de esto, una reseña realmente sería apreciada, gracias"
+        response = boto3.client("cloudwatch").put_metric_data(
+            Namespace='PremierLeague',
+            MetricData=[{'MetricName': 'AskForReview','Timestamp': datetime.now(),'Value': 1,},]
+        )
+        the_text =  wrap_language(handler_input, the_text)
         return(handler_input.response_builder.speak(the_text).set_should_end_session(True).response)
