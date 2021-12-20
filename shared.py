@@ -1,4 +1,4 @@
-this_is_shared = "test of shared global"
+# this_is_shared = "test of shared global"
 extra_cmd_prompts = {}
 noise  = "https://duy7y3nglgmh.cloudfront.net/FootballCrowdSound.mp3"
 noise2 = "https://duy7y3nglgmh.cloudfront.net/SoccerStadiumSoundEffect.mp3"
@@ -7,6 +7,53 @@ noise_max_millis = 4 * 60 * 1000
 noise2_max_millis = 40 * 1000
 noise3_max_millis = 40 * 1000
 doc = "doc://alexa/apla/documents/unchanged_template_from_tools"
+
+championship_table = {
+    "dataTable": {
+        "type": "object",
+        "back": "Back",
+        "properties": {
+            "headings": [
+                "",
+                "Team",
+                "Games",
+                "Wins",
+                "Draws",
+                "Losses",
+                "GD",
+                "Points"                
+            ],
+            "rows": [
+                {"backgroundColor": "green","cells": [{"text": "c"},{"text": "d"},{"text": "e"},{"text": "f"},{"text": "g"},{"text": "h"},{"text": "I"},{"text": "J"}]},
+                {"backgroundColor": "green","cells": [{"text": "c"},{"text": "d"},{"text": "e"},{"text": "f"},{"text": "g"},{"text": "h"},{"text": "I"},{"text": "J"}]},
+                {"backgroundColor": "blue","cells": [{"text": "c"},{"text": "d"},{"text": "e"},{"text": "f"},{"text": "g"},{"text": "h"},{"text": "I"},{"text": "J"}]},
+                {"backgroundColor": "blue","cells": [{"text": "c"},{"text": "d"},{"text": "e"},{"text": "f"},{"text": "g"},{"text": "h"},{"text": "I"},{"text": "J"}]},
+                {"backgroundColor": "blue","cells": [{"text": "c"},{"text": "d"},{"text": "e"},{"text": "f"},{"text": "g"},{"text": "h"},{"text": "I"},{"text": "J"}]},
+                {"backgroundColor": "blue","cells": [{"text": "c"},{"text": "d"},{"text": "e"},{"text": "f"},{"text": "g"},{"text": "h"},{"text": "I"},{"text": "J"}]},
+                {"backgroundColor": "black","cells": [{"text": "c"},{"text": "d"},{"text": "e"},{"text": "f"},{"text": "g"},{"text": "h"},{"text": "I"},{"text": "J"}]},
+                {"backgroundColor": "black","cells": [{"text": "c"},{"text": "d"},{"text": "e"},{"text": "f"},{"text": "g"},{"text": "h"},{"text": "I"},{"text": "J"}]},
+                {"backgroundColor": "black","cells": [{"text": "c"},{"text": "d"},{"text": "e"},{"text": "f"},{"text": "g"},{"text": "h"},{"text": "I"},{"text": "J"}]},
+                {"backgroundColor": "black","cells": [{"text": "c"},{"text": "d"},{"text": "e"},{"text": "f"},{"text": "g"},{"text": "h"},{"text": "I"},{"text": "J"}]},
+                {"backgroundColor": "black","cells": [{"text": "c"},{"text": "d"},{"text": "e"},{"text": "f"},{"text": "g"},{"text": "h"},{"text": "I"},{"text": "J"}]},
+                {"backgroundColor": "black","cells": [{"text": "c"},{"text": "d"},{"text": "e"},{"text": "f"},{"text": "g"},{"text": "h"},{"text": "I"},{"text": "J"}]},
+                {"backgroundColor": "black","cells": [{"text": "c"},{"text": "d"},{"text": "e"},{"text": "f"},{"text": "g"},{"text": "h"},{"text": "I"},{"text": "J"}]},
+                {"backgroundColor": "black","cells": [{"text": "c"},{"text": "d"},{"text": "e"},{"text": "f"},{"text": "g"},{"text": "h"},{"text": "I"},{"text": "J"}]},
+                {"backgroundColor": "black","cells": [{"text": "c"},{"text": "d"},{"text": "e"},{"text": "f"},{"text": "g"},{"text": "h"},{"text": "I"},{"text": "J"}]},
+                {"backgroundColor": "black","cells": [{"text": "c"},{"text": "d"},{"text": "e"},{"text": "f"},{"text": "g"},{"text": "h"},{"text": "I"},{"text": "J"}]},
+                {"backgroundColor": "black","cells": [{"text": "c"},{"text": "d"},{"text": "e"},{"text": "f"},{"text": "g"},{"text": "h"},{"text": "I"},{"text": "J"}]},
+                {"backgroundColor": "black","cells": [{"text": "c"},{"text": "d"},{"text": "e"},{"text": "f"},{"text": "g"},{"text": "h"},{"text": "I"},{"text": "J"}]},
+                {"backgroundColor": "black","cells": [{"text": "c"},{"text": "d"},{"text": "e"},{"text": "f"},{"text": "g"},{"text": "h"},{"text": "I"},{"text": "J"}]},
+                {"backgroundColor": "black","cells": [{"text": "c"},{"text": "d"},{"text": "e"},{"text": "f"},{"text": "g"},{"text": "h"},{"text": "I"},{"text": "J"}]},
+                {"backgroundColor": "black","cells": [{"text": "c"},{"text": "d"},{"text": "e"},{"text": "f"},{"text": "g"},{"text": "h"},{"text": "I"},{"text": "J"}]},
+                {"backgroundColor": "red","cells": [{"text": "c"},{"text": "d"},{"text": "e"},{"text": "f"},{"text": "g"},{"text": "h"},{"text": "I"},{"text": "J"}]},
+                {"backgroundColor": "red","cells": [{"text": "c"},{"text": "d"},{"text": "e"},{"text": "f"},{"text": "g"},{"text": "h"},{"text": "I"},{"text": "J"}]},
+                {"backgroundColor": "red","cells": [{"text": "c"},{"text": "d"},{"text": "e"},{"text": "f"},{"text": "g"},{"text": "h"},{"text": "I"},{"text": "J"}]},
+
+            ],
+        }
+        
+    }    
+}
 
 foo_table = {
     "dataTable": {
@@ -476,6 +523,60 @@ real_results_table = {
    }
 }
 
+other_leagues = {
+       "gridListData": {
+        "type": "object",
+        "objectId": "gridListSample",
+        "backgroundImage": {
+            "contentDescription": "this is the content",
+            "smallSourceUrl": "https://duy7y3nglgmh.cloudfront.net/football_pitch.png",
+            "largeSourceUrl": "https://duy7y3nglgmh.cloudfront.net/football_pitch.png",
+            "sources": [
+                {
+                    "url": "https://duy7y3nglgmh.cloudfront.net/football_pitch.png",
+                    "size": "small",
+                    "widthPixels": 0,
+                    "heightPixels": 0
+                },
+                {
+                    "url": "https://duy7y3nglgmh.cloudfront.net/football_pitch.png",
+                    "size": "large",
+                    "widthPixels": 0,
+                    "heightPixels": 0
+                }
+            ]
+        },
+        "title": "You can ask about ....",
+        "listItems": [
+            {
+                "primaryText": "Championship",
+                "imageSource": "https://duy7y3nglgmh.cloudfront.net/EFL2.png",
+                "primaryAction": [{"type": "SendEvent","arguments": ["championship"]}]
+            },
+            {
+                "primaryText": "Bundesliga",
+                "imageSource": "https://duy7y3nglgmh.cloudfront.net/bundesliga-logo-vector.gif",
+                "primaryAction": [{"type": "SendEvent","arguments": ["bundesliga"]}]
+            },
+            {
+                "primaryText": "La Liga",
+                "imageSource": "https://duy7y3nglgmh.cloudfront.net/la-liga-logo.png",
+                "primaryAction": [{"type": "SendEvent","arguments": ["laliga"]}]
+            },
+            {
+                "primaryText": "Serie A ",
+                "imageSource": "https://duy7y3nglgmh.cloudfront.net/serie-a-vector-logo.png",
+                "primaryAction": [{"type": "SendEvent","arguments": ["serie_a"]}]
+            },
+            {
+                "primaryText": "",
+                "imageSource": "https://duy7y3nglgmh.cloudfront.net/back.png",
+                "primaryAction": [{"type": "SendEvent","arguments": ["goBack"]}]
+            }            
+        ]
+    } 
+}
+
 datasources2 = {
     "gridListData": {
         "type": "object",
@@ -507,13 +608,18 @@ datasources2 = {
                 "primaryAction": [{"type": "SendEvent","arguments": ["table"]}]
             },
             {
+                "primaryText": "Other League Tables",
+                "imageSource": "https://duy7y3nglgmh.cloudfront.net/other_tables.png",
+                "primaryAction": [{"type": "SendEvent","arguments": ["other_leagues"]}]
+            },
+            {
                 "primaryText": "Fixtures",
                 "imageSource": "https://duy7y3nglgmh.cloudfront.net/fixtures.png",
                 "primaryAction": [{"type": "SendEvent","arguments": ["fixtures"]}]
             },
             {
                 "primaryText": "Results",
-                "imageSource": "https://duy7y3nglgmh.cloudfront.net/results.png",
+                "imageSource": "https://duy7y3nglgmh.cloudfront.net/results2.png",
                 "primaryAction": [{"type": "SendEvent","arguments": ["results"]}]
             },
             {
@@ -591,7 +697,8 @@ datasources2 = {
                 "imageScale": "best-fit",
                 "imageSource": "https://duy7y3nglgmh.cloudfront.net/qr_code.png",
                 "primaryAction": [{"type": "SendEvent","arguments": ["Leave a Review"]}]
-            },
+            }
+            
         ],
     }                        
 } 
@@ -628,13 +735,18 @@ datasourcessp = {
                 "primaryAction": [{"type": "SendEvent","arguments": ["table"]}]
             },
             {
+                "primaryText": "Otras Mesas",
+                "imageSource": "https://duy7y3nglgmh.cloudfront.net/other_tables.png",
+                "primaryAction": [{"type": "SendEvent","arguments": ["other_leagues"]}]
+            },
+            {
                 "primaryText": "los partidos",
-                "imageSource": "https://duy7y3nglgmh.cloudfront.net/fixtures.png",
+                "imageSource": "https://duy7y3nglgmh.cloudfront.net/fixturessp.png",
                 "primaryAction": [{"type": "SendEvent","arguments": ["fixtures"]}]
             },
             {
                 "primaryText": "Resultados",
-                "imageSource": "https://duy7y3nglgmh.cloudfront.net/results.png",
+                "imageSource": "https://duy7y3nglgmh.cloudfront.net/results2.png",
                 "primaryAction": [{"type": "SendEvent","arguments": ["results"]}]
             },
             {
@@ -676,6 +788,11 @@ datasourcessp = {
                 "primaryText": "El portero salva vs. Goles",
                 "imageSource": "https://duy7y3nglgmh.cloudfront.net/savepercent.png",
                 "primaryAction": [{"type": "SendEvent","arguments": ["savepercent"]}]
+            },
+            {
+                "primaryText": "Goles vs Disparos",
+                "imageSource": "https://duy7y3nglgmh.cloudfront.net/goals_shots.png",
+                "primaryAction": [{"type": "SendEvent","arguments": ["goals_shots"]}]
             },
             {
                 "primaryText": "La tarjeta roja",
