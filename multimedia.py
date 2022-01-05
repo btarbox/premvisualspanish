@@ -27,6 +27,7 @@ from random import randrange
 from QuickChart import QuickChart
 from datetime import datetime
 from statshandlers import wrap_language, set_translation, is_spanish, day_of_week_trans,month_trans, load_champ_table, champ_table
+from statshandlers import emit_locale_metric
 import traceback
 import copy
 
@@ -74,6 +75,7 @@ class ButtonEventHandler(AbstractRequestHandler):
         logger.info("at ButtonEventHandler")
         SELECTED_COLOR = "white"
         UNSELECTED_COLOR = "grey"
+        emit_locale_metric(handler_input)
         
         first_arg = handler_input.request_envelope.request.arguments[0]
         logger.info(f"first_arg was {first_arg}")
@@ -134,9 +136,25 @@ class ButtonEventHandler(AbstractRequestHandler):
         if first_arg == "goals_shots":
             return(goals_shots(handler_input))
             
- 
+        if first_arg == "attendance":
+            return(attendance(handler_input))
+            
+        if first_arg == "possession":
+            return(possession(handler_input))
+            
+        if first_arg == "in_out_box":
+            return(in_out_box(handler_input))
+            
+        if first_arg == "corners":
+            return(corners(handler_input))
+            
+        if first_arg == "offside":
+            return(offside(handler_input))
+        if first_arg == "var":
+            return(var(handler_input))
+            
         if first_arg == 'allteams':
-            load_group_to_line_chart(handler_input.attributes_manager.session_attributes, handler_input, 1, 20)
+            load_group_to_line_chart(handler_input.attributes_manager.session_attributes, handler_input, 0, 20)
             return(do_line_graph(handler_input))
         if first_arg == 'topsix':
             load_group_to_line_chart(handler_input.attributes_manager.session_attributes, handler_input, 0, 6)
@@ -305,7 +323,7 @@ def results_visual(handler_input):
         body_str = resp['Body'].read().decode("utf-8")
         n = body_str.split("\n")
         
-        for index in range(0,10):
+        for index in range(0,20):
             #logger.info(n[index])
             one_result = n[index].split(',')
             #logger.info(str(one_result))
@@ -327,6 +345,15 @@ def results_visual(handler_input):
 
     real_results_table["dataTable"]["back"] = _("Back")
     doc = _load_apl_document("resultstable.json")
+    if int(handler_input.request_envelope.context.viewport.pixel_height) == 1920:
+        logger.info("RUNNING on 15 inch portrait")
+        try:
+            doc["mainTemplate"]["items"][0]["item"]["items"][0]["items"][0]["items"][0]["item"]["fontSize"] = "2vh"
+        except Exception as ex:
+            logger.info("could not get pixel_height")
+            logger.error(ex)
+            traceback.print_exc()
+
     return (
         handler_input.response_builder
             .speak(wrap_language(handler_input, _("Here are the results, scroll down and press Back to return")))
@@ -367,13 +394,11 @@ def fixtures_visual(handler_input):
     try:
         logger.info("at fixtures_visual")
         _ = set_translation(handler_input)
-        # response = boto3.client("cloudwatch").put_metric_data(
-        #     Namespace='PremierLeague',
-        #     MetricData=[{'MetricName': 'InvocationsWithScreen','Timestamp': datetime.now(),'Value': 1,},]
-        # )
-    
+        lines_to_display = 21
+        if int(handler_input.request_envelope.context.viewport.pixel_height) == 1920:
+            lines_to_display = 21
         table_index = 0
-        speech, ignore = load_stats_ng(handler_input, 13, "fixtures2", ".", ".", ";", 0, 2, 1, "")
+        speech, ignore = load_stats_ng(handler_input, lines_to_display, "fixtures2", ".", ".", ";", 0, 2, 1, "")
         first_split = speech.split(";")
         for s in first_split:
         	for s2 in s.split(","):
@@ -414,6 +439,15 @@ def fixtures_visual(handler_input):
     logger.info("at end of fixtures_visual")
     results_table["dataTable"]["back"] = _("Back")
     doc = _load_apl_document("table2.json")
+    if int(handler_input.request_envelope.context.viewport.pixel_height) == 1920:
+        logger.info("RUNNING on 15 inch portrait")
+        try:
+            doc["mainTemplate"]["items"][0]["item"]["items"][0]["items"][0]["items"][0]["item"]["fontSize"] = "2vh"
+            #doc["mainTemplate"]["items"][0]["item"]["items"][1]["items"][0]["items"][0]["item"]["fontSize"] = "2vh"
+        except Exception as ex:
+            logger.info("could not get pixel_height")
+            logger.error(ex)
+            traceback.print_exc()
 
     return (
         handler_input.response_builder
@@ -433,10 +467,6 @@ def laliga_visual(handler_input, key, text):
     bun_table = []
     _ = set_translation(handler_input)
     logger.info("at laliga table chart")
-    # response = boto3.client("cloudwatch").put_metric_data(
-    #     Namespace='PremierLeague',
-    #     MetricData=[{'MetricName': 'InvocationsWithScreen','Timestamp': datetime.now(),'Value': 1,},]
-    # )
     s3 = boto3.client("s3")
     resp = s3.get_object(Bucket="bpltables", Key=key)
     body_str = resp['Body'].read().decode("utf-8")
@@ -480,6 +510,14 @@ def laliga_visual(handler_input, key, text):
             logger.error(ex)
     logger.info("about to do LaLiga or Seria A")
     doc = _load_apl_document("table.json")
+    if int(handler_input.request_envelope.context.viewport.pixel_height) == 1920:
+        logger.info("RUNNING on 15 inch portrait")
+        try:
+            doc["mainTemplate"]["items"][0]["item"]["items"][0]["items"][0]["item"]["fontSize"] = "1vh"
+            doc["mainTemplate"]["items"][0]["item"]["items"][1]["items"][0]["items"][0]["item"]["fontSize"] = "1vh"
+        except Exception as ex:
+            logger.info("could not get pixel_height")
+            logger.error(ex)
     return (
         handler_input.response_builder
             .speak(wrap_language(handler_input,_("Here is the table, press Back to return")))  
@@ -501,10 +539,6 @@ def bundesliga_visual(handler_input):
     bun_table = []
     _ = set_translation(handler_input)
     logger.info("at bundesliga table chart")
-    # response = boto3.client("cloudwatch").put_metric_data(
-    #     Namespace='PremierLeague',
-    #     MetricData=[{'MetricName': 'InvocationsWithScreen','Timestamp': datetime.now(),'Value': 1,},]
-    # )
     s3 = boto3.client("s3")
     resp = s3.get_object(Bucket="bpltables", Key="bundesliga")
     body_str = resp['Body'].read().decode("utf-8")
@@ -550,6 +584,14 @@ def bundesliga_visual(handler_input):
             logger.info("hit exception")
             logger.error(ex)        
     doc = _load_apl_document("table.json")
+    if int(handler_input.request_envelope.context.viewport.pixel_height) == 1920:
+        logger.info("RUNNING on 15 inch portrait")
+        try:
+            doc["mainTemplate"]["items"][0]["item"]["items"][0]["items"][0]["item"]["fontSize"] = "1vh"
+            doc["mainTemplate"]["items"][0]["item"]["items"][1]["items"][0]["items"][0]["item"]["fontSize"] = "1vh"
+        except Exception as ex:
+            logger.info("could not get pixel_height")
+            logger.error(ex)
     return (
         handler_input.response_builder
             .speak(wrap_language(handler_input, _("Here is the table, press Back to return")))
@@ -567,10 +609,6 @@ def bundesliga_visual(handler_input):
 def championship_visual(handler_input):
     _ = set_translation(handler_input)
     logger.info("at championship table chart")
-    # response = boto3.client("cloudwatch").put_metric_data(
-    #     Namespace='PremierLeague',
-    #     MetricData=[{'MetricName': 'InvocationsWithScreen','Timestamp': datetime.now(),'Value': 1,},]
-    # )
     load_champ_table()
     logger.info("champ table loaded")
     try:
@@ -586,7 +624,6 @@ def championship_visual(handler_input):
             #logger.info(championship_table["dataTable"]["properties"]["rows"][index] )
             #logger.info('got here')
             championship_table["dataTable"]["properties"]["rows"][index]["cells"][0]["text"] = str(index+1)
-            logger.info('got here2')
             championship_table["dataTable"]["properties"]["rows"][index]["cells"][1]["text"] = short_champ_names.get(champ_table[index][0])
             championship_table["dataTable"]["properties"]["rows"][index]["cells"][2]["text"] = str(champ_table[index][1])
             championship_table["dataTable"]["properties"]["rows"][index]["cells"][3]["text"] = str(champ_table[index][2])
@@ -601,7 +638,23 @@ def championship_visual(handler_input):
 
     #logger.info(str(championship_table))
     doc = _load_apl_document("championshiptable.json")
-
+    logger.info(int(handler_input.request_envelope.context.viewport.pixel_height))
+    if int(handler_input.request_envelope.context.viewport.pixel_height) == 1920:
+        logger.info("RUNNING on 15 inch portrait")
+        try:
+            # logger.info(doc["mainTemplate"]["items"][0]["item"]["items"][0])
+            # logger.info(doc["mainTemplate"]["items"][0]["item"]["items"][0]["items"][0])
+            # logger.info(doc["mainTemplate"]["items"][0]["item"]["items"][0]["items"][0]["item"]["fontSize"])
+            doc["mainTemplate"]["items"][0]["item"]["items"][0]["items"][0]["item"]["fontSize"] = "2vh"
+            # logger.info("set header, now set actual data")
+            # logger.info(doc["mainTemplate"]["items"][0]["item"]["items"][1]["items"][0]["items"][0]["item"]["fontSize"])
+            doc["mainTemplate"]["items"][0]["item"]["items"][1]["items"][0]["items"][0]["item"]["fontSize"] = "1vh"
+        except Exception as ex:
+            logger.info("could not get pixel_height")
+            logger.error(ex)
+    else:
+        logger.info("running on regular device")
+        
     return (
         handler_input.response_builder
             .speak(wrap_language(handler_input, _("Here is the table, press Back to return")))
@@ -619,10 +672,6 @@ def championship_visual(handler_input):
 def table(handler_input):
     _ = set_translation(handler_input)
     logger.info("at table chart")
-    # response = boto3.client("cloudwatch").put_metric_data(
-    #     Namespace='PremierLeague',
-    #     MetricData=[{'MetricName': 'InvocationsWithScreen','Timestamp': datetime.now(),'Value': 1,},]
-    # )
     reload_main_table_as_needed()
 
     try:
@@ -659,7 +708,15 @@ def table(handler_input):
     
     try:
         doc = _load_apl_document("table.json")
-        #logger.info("TABLE.JSON " + str(doc))
+        if int(handler_input.request_envelope.context.viewport.pixel_height) == 1920:
+            logger.info("RUNNING on 15 inch portrait")
+            try:
+                doc["mainTemplate"]["items"][0]["item"]["items"][0]["items"][0]["item"]["fontSize"] = "1vh"
+                doc["mainTemplate"]["items"][0]["item"]["items"][1]["items"][0]["items"][0]["item"]["fontSize"] = "1vh"
+            except Exception as ex:
+                logger.info("could not get pixel_height")
+                logger.error(ex)
+            #logger.info("TABLE.JSON " + str(doc))
         return (
             handler_input.response_builder
                 .speak("Here is the table, press Back to return")
@@ -699,10 +756,6 @@ def _load_apl_document(file_path):
 def goaldifference(handler_input):
     _ = set_translation(handler_input)
     ds = get_goal_difference_url(handler_input)
-    # response = boto3.client("cloudwatch").put_metric_data(
-    #     Namespace='PremierLeague',
-    #     MetricData=[{'MetricName': 'InvocationsWithScreen','Timestamp': datetime.now(),'Value': 1,},]
-    # )
 
     logger.info(ds)
     return (
@@ -765,10 +818,6 @@ def get_goal_difference_url(handler_input):
 def yellow_red(handler_input):
     _ = set_translation(handler_input)
     ds = get_save_percent_url(handler_input,_("Yellow Cards"), _("Red Cards"), _("Cards by Referees"), "yellow_red")
-    # response = boto3.client("cloudwatch").put_metric_data(
-    #     Namespace='PremierLeague',
-    #     MetricData=[{'MetricName': 'InvocationsWithScreen','Timestamp': datetime.now(),'Value': 1,},]
-    # )
 
     logger.info(ds)
     return (
@@ -790,14 +839,146 @@ def yellow_red(handler_input):
         )
 
 
+def attendance(handler_input):
+    _ = set_translation(handler_input)
+    ds = get_two_stacked_url(handler_input,_("Actual"), _("Capacity"), _("Attendance"), "attendance")
+
+    logger.info(ds)
+    return (
+        handler_input.response_builder
+            .speak(wrap_language(handler_input, _("Here are team attendances, press Back to return")))
+            .set_should_end_session(False)          
+            .add_directive( 
+              APLRenderDocumentDirective(
+                token= TOKEN,
+                document = {
+                    "type" : "Link",
+                    "token" : TOKEN,
+                    "src"  : "doc://alexa/apl/documents/GoalDifference"
+                },
+                datasources = {"source": {"url": ds, "back": _("Back")}}
+                    
+              )
+            ).response
+        )
+
+def in_out_box(handler_input):
+    _ = set_translation(handler_input)
+    ds = get_two_stacked_url(handler_input,_("Inside Box"), _("Outside Box"), _("Goals"), "in_out_box")
+
+    logger.info(ds)
+    return (
+        handler_input.response_builder
+            .speak(wrap_language(handler_input, _("Here are team goals, press Back to return")))
+            .set_should_end_session(False)          
+            .add_directive( 
+              APLRenderDocumentDirective(
+                token= TOKEN,
+                document = {
+                    "type" : "Link",
+                    "token" : TOKEN,
+                    "src"  : "doc://alexa/apl/documents/GoalDifference"
+                },
+                datasources = {"source": {"url": ds, "back": _("Back")}}
+                    
+              )
+            ).response
+        )
+        
+def var(handler_input):
+    _ = set_translation(handler_input)
+    ds = get_two_stacked_url(handler_input,_("For"), _("Against"), _("Decisions By Percent For"), "var")
+
+    logger.info(ds)
+    return (
+        handler_input.response_builder
+            .speak(wrap_language(handler_input, _("Here are team VAR decisions, press Back to return")))
+            .set_should_end_session(False)          
+            .add_directive( 
+              APLRenderDocumentDirective(
+                token= TOKEN,
+                document = {
+                    "type" : "Link",
+                    "token" : TOKEN,
+                    "src"  : "doc://alexa/apl/documents/GoalDifference"
+                },
+                datasources = {"source": {"url": ds, "back": _("Back")}}
+                    
+              )
+            ).response
+        )
+
+def possession(handler_input):
+    _ = set_translation(handler_input)
+    ds = get_one_stat_url(handler_input,_("Actual"), _("Percent Possession"), "possession")
+
+    logger.info(ds)
+    return (
+        handler_input.response_builder
+            .speak(wrap_language(handler_input, _("Here are team percent possessions, press Back to return")))
+            .set_should_end_session(False)          
+            .add_directive( 
+              APLRenderDocumentDirective(
+                token= TOKEN,
+                document = {
+                    "type" : "Link",
+                    "token" : TOKEN,
+                    "src"  : "doc://alexa/apl/documents/GoalDifference"
+                },
+                datasources = {"source": {"url": ds, "back": _("Back")}}
+                    
+              )
+            ).response
+        )
+        
+def corners(handler_input):
+    _ = set_translation(handler_input)
+    ds = get_one_stat_url(handler_input,_("Corners"), _("Corners"), "corners")
+
+    logger.info(ds)
+    return (
+        handler_input.response_builder
+            .speak(wrap_language(handler_input, _("Here are team corners, press Back to return")))
+            .set_should_end_session(False)          
+            .add_directive( 
+              APLRenderDocumentDirective(
+                token= TOKEN,
+                document = {
+                    "type" : "Link",
+                    "token" : TOKEN,
+                    "src"  : "doc://alexa/apl/documents/GoalDifference"
+                },
+                datasources = {"source": {"url": ds, "back": _("Back")}}
+                    
+              )
+            ).response
+        )
+def offside(handler_input):
+    _ = set_translation(handler_input)
+    ds = get_one_stat_url(handler_input,_("Offside"), _("Offside"), "offside")
+
+    logger.info(ds)
+    return (
+        handler_input.response_builder
+            .speak(wrap_language(handler_input, _("Here are team offside, press Back to return")))
+            .set_should_end_session(False)          
+            .add_directive( 
+              APLRenderDocumentDirective(
+                token= TOKEN,
+                document = {
+                    "type" : "Link",
+                    "token" : TOKEN,
+                    "src"  : "doc://alexa/apl/documents/GoalDifference"
+                },
+                datasources = {"source": {"url": ds, "back": _("Back")}}
+                    
+              )
+            ).response
+        )
     
 def savepercent(handler_input):
     _ = set_translation(handler_input)
     ds = get_save_percent_url(handler_input,_("Saves"), _("goals allowed"), _("Keeper Saves vs. Goals"), "savepercent")
-    # response = boto3.client("cloudwatch").put_metric_data(
-    #     Namespace='PremierLeague',
-    #     MetricData=[{'MetricName': 'InvocationsWithScreen','Timestamp': datetime.now(),'Value': 1,},]
-    # )
 
     #logger.info(ds)
     return (
@@ -824,6 +1005,9 @@ def get_save_percent_url(handler_input, label1, label2, title, filename):
     qc = QuickChart()
     qc.width = 500
     qc.height = 300
+    if int(handler_input.request_envelope.context.viewport.pixel_height) == 1920:
+        logger.info("RUNNING on 15 inch portrait")
+        qc.height = 700
     if filename == "savepercent":
         names, stat1, stat2 = load_combined_stats(5,"savepercent",1,2,4)
     else:
@@ -870,15 +1054,101 @@ def get_save_percent_url(handler_input, label1, label2, title, filename):
     return(ret_url)
 
 
+def get_two_stacked_url(handler_input, label1, label2, title, filename):
+    _ = set_translation(handler_input)
+    qc = QuickChart()
+    qc.width = 500
+    qc.height = 300
+    if int(handler_input.request_envelope.context.viewport.pixel_height) == 1920:
+        logger.info("RUNNING on 15 inch portrait")
+        qc.height = 700
+    names, stat1, stat2 = load_two_stats(20, filename)
+
+    dict = {
+        "type": "bar", 
+        "data": {
+            "labels": [], 
+                "datasets": [
+                    {
+                        "label": label1,
+                        "backgroundColor": 'rgb(75, 192, 192)',
+                        "data":[]
+                    },
+                    {
+                        "label": label2,
+                        "backgroundColor": 'rgb(255,99,132)',
+                        "data":[]
+                    }
+                ]
+        },
+        "options":{
+            "responsive": "true",
+            "title": {
+              "display": "true",
+              "text": title
+            },
+            "scales": {
+                "xAxes": [ { "stacked": "true"}],
+                "yAxes": [ { "stacked": "true"}],
+            }
+      }    
+    }
+    dict["data"]["labels"] = names
+    dict["data"]["datasets"][0]["data"] = stat1
+    dict["data"]["datasets"][1]["data"] = stat2
+    qc.config = str(dict)
+
+    ret_url = qc.get_short_url()
+    return(ret_url)
+
+def get_one_stat_url(handler_input, label1,  title, filename):
+    _ = set_translation(handler_input)
+    logger.info("at get_one_stat_url")
+    
+    qc = QuickChart()
+    qc.width = 500
+    qc.height = 300
+    if int(handler_input.request_envelope.context.viewport.pixel_height) == 1920:
+        logger.info("RUNNING on 15 inch portrait")
+        qc.height = 700
+    names, stat1, ignore = load_two_stats(20, filename)
+    logger.info("at get_one_stat_url2")
+
+    dict = {
+        "type": "bar", 
+        "data": {
+            "labels": [], 
+                "datasets": [
+                    {
+                        "label": label1,
+                        "backgroundColor": 'rgb(75, 192, 192)',
+                        "data":[]
+                    }
+                ]
+        },
+        "options":{
+            "responsive": "true",
+            "title": {
+              "display": "true",
+              "text": title
+            }
+      }    
+    }
+    logger.info("at get_one_stat_url3")
+    dict["data"]["labels"] = names
+    dict["data"]["datasets"][0]["data"] = stat1
+    #dict["data"]["datasets"][1]["data"] = ignore
+    qc.config = str(dict)
+    logger.info("at get_one_stat_url4")
+
+    ret_url = qc.get_short_url()
+    return(ret_url)
+
+
 def goals_shots(handler_input):
     logger.info("at goals_shots")
     _ = set_translation(handler_input)
     ds = get_goals_shots_url(handler_input)
-    #logger.info(f"ds in goals_shots is {ds}")
-    # response = boto3.client("cloudwatch").put_metric_data(
-    #     Namespace='PremierLeague',
-    #     MetricData=[{'MetricName': 'InvocationsWithScreen','Timestamp': datetime.now(),'Value': 1,},]
-    # )
 
     #logger.info(ds)
     return (
@@ -909,6 +1179,9 @@ def get_goals_shots_url(handler_input):
     qc = QuickChart()
     qc.width = 500
     qc.height = 300
+    if int(handler_input.request_envelope.context.viewport.pixel_height) == 1920:
+        logger.info("RUNNING on 15 inch portrait")
+        qc.height = 700
     names, goals, shots = load_two_stats(5,"goals_shots")
     #logger.info("after load_two_")
     dict = {
@@ -976,6 +1249,9 @@ def get_line_chart_url(session_attr, handler_input):
     qc = QuickChart()
     qc.width = 500
     qc.height = 300
+    if int(handler_input.request_envelope.context.viewport.pixel_height) == 1920:
+        logger.info("RUNNING on 15 inch portrait")
+        qc.height = 700
     form_data, highest_point, most_games_played = get_team_points_and_max_points()
     dict = {"type": "line", "data":{}}
     dict["data"]["labels"] = []
@@ -1091,11 +1367,7 @@ def do_line_graph(handler_input):
             .add_directive( 
               APLRenderDocumentDirective(
                 token= TOKEN,
-                document = {
-                    "type" : "Link",
-                    "token" : TOKEN,
-                    "src"  : "doc://alexa/apl/documents/RealLineChart"
-                },
+                document = _load_apl_document("reallinechart.json"),
                 datasources = {"source": {"url": ds, "back": _("Back")}}
                     
               )
