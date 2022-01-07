@@ -97,6 +97,52 @@ def is_spanish(handler_input):
     loc = handler_input.request_envelope.request.locale
     return loc == "es-US" or loc == "es-ES" or loc == "es-MX"
 
+''' 
+CloudWatch metrics on locale, grouping all the Spanish variants together 
+Two metrics are emitted, one just for locale and another for locale/AV_type
+It also emits a metric for with or without a screen
+'''
+def emit_locale_metric(handler_input):
+    loc = handler_input.request_envelope.request.locale
+    cw = boto3.client("cloudwatch")
+    if has_screen(handler_input):
+        cw.put_metric_data(
+            Namespace='PremierLeague',
+            MetricData=[{'MetricName': 'InvocationsWithScreen','Timestamp': datetime.now(),'Value': 1,},]
+        )
+    else:
+        cw.put_metric_data(
+            Namespace='PremierLeague',
+            MetricData=[{'MetricName': 'InvocationsWithOutScreen','Timestamp': datetime.now(),'Value': 1,},]
+        ) 
+        
+    if is_spanish(handler_input):
+        loc = "ES"
+    cw.put_metric_data(
+                Namespace='PremierLeague',
+                MetricData=[
+                    {
+                        'MetricName': 'locale',
+                        'Dimensions': [{ 'Name': 'locale','Value': loc},],
+                        'Value': 1,
+                        'Unit': 'Count'
+                    },
+                ]
+            )
+    device_type = "-Show" if has_screen(handler_input) else "-Dot"
+    cw.put_metric_data(
+                Namespace='PremierLeague',
+                MetricData=[
+                    {
+                        'MetricName': 'localeAV',
+                        'Dimensions': [{ 'Name': 'localeAV','Value': loc+device_type},],
+                        'Value': 1,
+                        'Unit': 'Count'
+                    },
+                ]
+            )
+        
+
 
 def set_translation(handler_input):
     #logger.info("at set_translation {}".format(handler_input.request_envelope.request.locale))
@@ -212,6 +258,7 @@ def foul_handler(handler_input):
 
 def output_right_directive(handler_input, the_text, image_url, noise, noise_max):
     _ = set_translation(handler_input)
+    emit_locale_metric(handler_input)
     session_attr = handler_input.attributes_manager.session_attributes
     already_displayed_screen = session_attr.get("screen_displayed", False)
     noise_start = str(randrange(0, noise_max))
@@ -238,10 +285,6 @@ def output_right_directive(handler_input, the_text, image_url, noise, noise_max)
                     datasources = datasourcessp if is_spanish(handler_input) else datasources2)).response)
     elif get_supported_interfaces(handler_input).alexa_presentation_apl is not None:
         logger.info(f"output_right_directive audio {the_text}, {image_url}, {noise}, {noise_max} {noise_start}.")
-        response = boto3.client("cloudwatch").put_metric_data(
-            Namespace='PremierLeague',
-            MetricData=[{'MetricName': 'InvocationsWithScreen','Timestamp': datetime.now(),'Value': 1,},]
-        )
         return(handler_input.response_builder.ask(the_text).add_directive(  
               APLARenderDocumentDirective(
                 token= "tok",
@@ -253,10 +296,6 @@ def output_right_directive(handler_input, the_text, image_url, noise, noise_max)
         card = StandardCard(title=_("Premier League"), text=strip_emotions(the_text), image=Image(small_image_url=image_url, large_image_url=image_url))
         logger.info("Outputing StandardCard")
         logger.info(f"output_right_directive audio {the_text}, {image_url}, {noise}, {noise_max} {noise_start}.")
-        response = boto3.client("cloudwatch").put_metric_data(
-            Namespace='PremierLeague',
-            MetricData=[{'MetricName': 'InvocationsWithOutScreen','Timestamp': datetime.now(),'Value': 1,},]
-        )
         return(handler_input.response_builder.set_card(card).ask(the_text).add_directive(
               APLARenderDocumentDirective(
                 token= "tok",
@@ -455,9 +494,11 @@ def fixtures_handler(handler_input):
     speech, card_text = load_stats_ng(handler_input, 5, "fixtures2", _(" versus "), _(" at "), "  ", 0, 2, 1, "")
     speech = day_of_week_trans(handler_input,speech)
     speech = month_trans(handler_input,speech)
+    if not is_spanish(handler_input):
+        speech = speech.replace("oh clock", "")
     speech = intro + speech + _('Would you like to hear more?')
     image_url = "https://duy7y3nglgmh.cloudfront.net/tackles.png"
-    
+    logger.info("saying fixture " + speech)
     return output_right_directive(handler_input, speech, image_url, noise2, noise2_max_millis)
 
 
@@ -986,7 +1027,7 @@ def load_stats_ng(handler_input, number, filename, article1, article2, article3,
             index += 1
     except:
         logging.info("RAN OFF END OF LIST OF FIXTURES OR RESULTS")
-        say += _(" that is the end of the list. ")
+        #say += _(" that is the end of the list. ")
     if is_spanish(handler_input):
         if has_screen(handler_input):
             say = say.replace("oh clock", "00")
@@ -1017,7 +1058,7 @@ def get_tz_adjusted_time(handler_input, local_hour, local_minute):
     session_attr["local_minute"] = local_minute
     session_attr["local_time"] = local_time
     handler_input.attributes_manager.session_attributes = session_attr
-    
+    logger.info("local time is " + str(local_time))
     return local_time
 
 
