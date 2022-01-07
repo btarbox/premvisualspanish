@@ -73,7 +73,7 @@ foo_table = {
                 "Points"                
                     ],
             "rows": [
-                {"backgroundColor": "gold","cells": [{"text": "a"},{"text": "b"},{"text": "c"},{"text": "d"},{"text": "e"},{"text": "f"},{"text": "g"},{"text": "h"},{"text": "I"},{"text": "J"}]},
+                {"backgroundColor": "goldenrod","cells": [{"text": "a"},{"text": "b"},{"text": "c"},{"text": "d"},{"text": "e"},{"text": "f"},{"text": "g"},{"text": "h"},{"text": "I"},{"text": "J"}]},
                 {"backgroundColor": "green","cells": [{"text": "a"},{"text": "b"},{"text": "c"},{"text": "d"},{"text": "e"},{"text": "f"},{"text": "g"},{"text": "h"},{"text": "I"},{"text": "J"}]},
                 {"backgroundColor": "green","cells": [{"text": "a"},{"text": "b"},{"text": "c"},{"text": "d"},{"text": "e"},{"text": "f"},{"text": "g"},{"text": "h"},{"text": "I"},{"text": "J"}]},
                 {"backgroundColor": "green","cells": [{"text": "a"},{"text": "b"},{"text": "c"},{"text": "d"},{"text": "e"},{"text": "f"},{"text": "g"},{"text": "h"},{"text": "I"},{"text": "J"}]},
@@ -146,6 +146,15 @@ results_table = {
                 {"backgroundColor": "grey","cells": [{"text": "a"},{"text": "b"},{"text": "c"}]},
                 {"backgroundColor": "grey","cells": [{"text": "a"},{"text": "b"},{"text": "c"}]},
                 {"backgroundColor": "grey","cells": [{"text": "a"},{"text": "b"},{"text": "c"}]},
+                {"backgroundColor": "grey","cells": [{"text": "a"},{"text": "b"},{"text": "c"}]},
+                {"backgroundColor": "grey","cells": [{"text": "a"},{"text": "b"},{"text": "c"}]},
+                {"backgroundColor": "grey","cells": [{"text": "a"},{"text": "b"},{"text": "c"}]},
+                {"backgroundColor": "grey","cells": [{"text": "a"},{"text": "b"},{"text": "c"}]},
+                {"backgroundColor": "grey","cells": [{"text": "a"},{"text": "b"},{"text": "c"}]},
+                {"backgroundColor": "grey","cells": [{"text": "a"},{"text": "b"},{"text": "c"}]},
+                {"backgroundColor": "grey","cells": [{"text": "a"},{"text": "b"},{"text": "c"}]},
+                {"backgroundColor": "grey","cells": [{"text": "a"},{"text": "b"},{"text": "c"}]},
+                {"backgroundColor": "grey","cells": [{"text": "a"},{"text": "b"},{"text": "c"}]},
             ]
         }
     }
@@ -168,6 +177,356 @@ real_results_table = {
                 "Win"
             ],
             "rows": [
+                {
+                    "backgroundColor": "black",
+                    "cells": [
+                        {
+                            "text": "https://duy7y3nglgmh.cloudfront.net/Arsenal.png",
+                            "istext": "False"
+                        },
+                        {
+                            "text": "Arsenal",
+                            "istext": "True",
+                            "backgroundColor": "purple",
+                            "color": "white",
+                            "width": "36%"
+                        },
+                        {
+                            "text": "3-1",
+                            "istext": "True",
+                            "backgroundColor": "yellow",
+                            "color": "black",
+                            "width": "7%",
+                            "textAlign": "center"
+                        },
+                        {
+                            "text": "Liverpool",
+                            "istext": "True",
+                            "backgroundColor": "purple",
+                            "color": "white",
+                            "width": "36%"
+                        },
+                        {
+                            "text": "https://duy7y3nglgmh.cloudfront.net/Liverpool.png",
+                            "istext": "False"
+                        }
+                    ]
+                },
+                {
+                    "backgroundColor": "black",
+                    "cells": [
+                        {
+                            "text": "https://duy7y3nglgmh.cloudfront.net/TottenhamHotspur.png",
+                            "istext": "False"
+                        },
+                        {
+                            "text": "Tottenham",
+                            "istext": "True",
+                            "backgroundColor": "purple",
+                            "color": "white",
+                            "width": "36%"
+                        },
+                        {
+                            "text": "0-5",
+                            "istext": "True",
+                            "backgroundColor": "yellow",
+                            "color": "black",
+                            "width": "7%",
+                            "textAlign": "center"
+                        },
+                        {
+                            "text": "Everton",
+                            "istext": "True",
+                            "backgroundColor": "purple",
+                            "color": "white",
+                            "width": "36%"
+                        },
+                        {
+                            "text": "https://duy7y3nglgmh.cloudfront.net/Everton.png",
+                            "istext": "False"
+                        }
+                    ]
+                },
+                {
+                    "backgroundColor": "black",
+                    "cells": [
+                        {
+                            "text": "https://duy7y3nglgmh.cloudfront.net/LeicesterCity.png",
+                            "istext": "False"
+                        },
+                        {
+                            "text": "Leicester City",
+                            "istext": "True",
+                            "backgroundColor": "purple",
+                            "color": "white",
+                            "width": "36%"
+                        },
+                        {
+                            "text": "2-1",
+                            "istext": "True",
+                            "backgroundColor": "yellow",
+                            "color": "black",
+                            "width": "7%",
+                            "textAlign": "center"
+                        },
+                        {
+                            "text": "Manchester United",
+                            "istext": "True",
+                            "backgroundColor": "purple",
+                            "color": "white",
+                            "width": "36%"
+                        },
+                        {
+                            "text": "https://duy7y3nglgmh.cloudfront.net/ManchesterUnited.png",
+                            "istext": "False"
+                        }
+                    ]
+                },
+                {
+                    "backgroundColor": "black",
+                    "cells": [
+                        {
+                            "text": "https://duy7y3nglgmh.cloudfront.net/Chelsea.png",
+                            "istext": "False"
+                        },
+                        {
+                            "text": "Chelsea",
+                            "istext": "True",
+                            "backgroundColor": "purple",
+                            "color": "white",
+                            "width": "36%"
+                        },
+                        {
+                            "text": "7-10",
+                            "istext": "True",
+                            "backgroundColor": "yellow",
+                            "color": "black",
+                            "width": "7%",
+                            "textAlign": "center"
+                        },
+                        {
+                            "text": "Norwich",
+                            "istext": "True",
+                            "backgroundColor": "purple",
+                            "color": "white",
+                            "width": "36%"
+                        },
+                        {
+                            "text": "https://duy7y3nglgmh.cloudfront.net/NorwichCity.png",
+                            "istext": "False"
+                        }
+                    ]
+                },
+                {
+                    "backgroundColor": "black",
+                    "cells": [
+                        {
+                            "text": "https://duy7y3nglgmh.cloudfront.net/CrystalPalace.png",
+                            "istext": "False"
+                        },
+                        {
+                            "text": "CrystalPalace",
+                            "istext": "True",
+                            "backgroundColor": "purple",
+                            "color": "white",
+                            "width": "36%"
+                        },
+                        {
+                            "text": "1-1",
+                            "istext": "True",
+                            "backgroundColor": "yellow",
+                            "color": "black",
+                            "width": "7%",
+                            "textAlign": "center"
+                        },
+                        {
+                            "text": "Newcastle",
+                            "istext": "True",
+                            "backgroundColor": "purple",
+                            "color": "white",
+                            "width": "36%"
+                        },
+                        {
+                            "text": "https://duy7y3nglgmh.cloudfront.net/NewcastleUnited.png",
+                            "istext": "False"
+                        }
+                    ]
+                },
+                {
+                    "backgroundColor": "black",
+                    "cells": [
+                        {
+                            "text": "https://duy7y3nglgmh.cloudfront.net/Everton.png",
+                            "istext": "False"
+                        },
+                        {
+                            "text": "Everton",
+                            "istext": "True",
+                            "backgroundColor": "purple",
+                            "color": "white",
+                            "width": "36%"
+                        },
+                        {
+                            "text": "2-5",
+                            "istext": "True",
+                            "backgroundColor": "yellow",
+                            "color": "black",
+                            "width": "7%",
+                            "textAlign": "center"
+                        },
+                        {
+                            "text": "Watford",
+                            "istext": "True",
+                            "backgroundColor": "purple",
+                            "color": "white",
+                            "width": "36%"
+                        },
+                        {
+                            "text": "https://duy7y3nglgmh.cloudfront.net/Watford.png",
+                            "istext": "False"
+                        }
+                    ]
+                },
+                {
+                    "backgroundColor": "black",
+                    "cells": [
+                        {
+                            "text": "https://duy7y3nglgmh.cloudfront.net/LeedsUnited.png",
+                            "istext": "False"
+                        },
+                        {
+                            "text": "Leeds",
+                            "istext": "True",
+                            "backgroundColor": "purple",
+                            "color": "white",
+                            "width": "36%"
+                        },
+                        {
+                            "text": "1-1",
+                            "istext": "True",
+                            "backgroundColor": "yellow",
+                            "color": "black",
+                            "width": "7%",
+                            "textAlign": "center"
+                        },
+                        {
+                            "text": "Wolverhanpton",
+                            "istext": "True",
+                            "backgroundColor": "purple",
+                            "color": "white",
+                            "width": "36%"
+                        },
+                        {
+                            "text": "https://duy7y3nglgmh.cloudfront.net/WolverhamptonWanderers.png",
+                            "istext": "False"
+                        }
+                    ]
+                },
+                {
+                    "backgroundColor": "black",
+                    "cells": [
+                        {
+                            "text": "https://duy7y3nglgmh.cloudfront.net/Southampton.png",
+                            "istext": "False"
+                        },
+                        {
+                            "text": "Southampton",
+                            "istext": "True",
+                            "backgroundColor": "purple",
+                            "color": "white",
+                            "width": "36%"
+                        },
+                        {
+                            "text": "2-2",
+                            "istext": "True",
+                            "backgroundColor": "yellow",
+                            "color": "black",
+                            "width": "7%",
+                            "textAlign": "center"
+                        },
+                        {
+                            "text": "Burnley",
+                            "istext": "True",
+                            "backgroundColor": "purple",
+                            "color": "white",
+                            "width": "36%"
+                        },
+                        {
+                            "text": "https://duy7y3nglgmh.cloudfront.net/Burnley.png",
+                            "istext": "False"
+                        }
+                    ]
+                },
+                {
+                    "backgroundColor": "black",
+                    "cells": [
+                        {
+                            "text": "https://duy7y3nglgmh.cloudfront.net/BrightonAndHoveAlbion.png",
+                            "istext": "False"
+                        },
+                        {
+                            "text": "Brighton",
+                            "istext": "True",
+                            "backgroundColor": "purple",
+                            "color": "white",
+                            "width": "36%"
+                        },
+                        {
+                            "text": "2-1",
+                            "istext": "True",
+                            "backgroundColor": "yellow",
+                            "color": "black",
+                            "width": "7%",
+                            "textAlign": "center"
+                        },
+                        {
+                            "text": "Manchester City",
+                            "istext": "True",
+                            "backgroundColor": "purple",
+                            "color": "white",
+                            "width": "36%"
+                        },
+                        {
+                            "text": "https://duy7y3nglgmh.cloudfront.net/ManchesterCity.png",
+                            "istext": "False"
+                        }
+                    ]
+                },
+                {
+                    "backgroundColor": "black",
+                    "cells": [
+                        {
+                            "text": "https://duy7y3nglgmh.cloudfront.net/LeicesterCity.png",
+                            "istext": "False"
+                        },
+                        {
+                            "text": "Leicester City",
+                            "istext": "True",
+                            "backgroundColor": "purple",
+                            "color": "white",
+                            "width": "36%"
+                        },
+                        {
+                            "text": "2-1",
+                            "istext": "True",
+                            "backgroundColor": "yellow",
+                            "color": "black",
+                            "width": "7%",
+                            "textAlign": "center"
+                        },
+                        {
+                            "text": "Manchester United",
+                            "istext": "True",
+                            "backgroundColor": "purple",
+                            "color": "white",
+                            "width": "36%"
+                        },
+                        {
+                            "text": "https://duy7y3nglgmh.cloudfront.net/ManchesterUnited.png",
+                            "istext": "False"
+                        }
+                    ]
+                },
                 {
                     "backgroundColor": "black",
                     "cells": [
@@ -633,6 +992,41 @@ datasources2 = {
                 "primaryAction": [{"type": "SendEvent","arguments": ["line"]}]
             },
             {
+                "primaryText": "Attendance By Team",
+                "imageSource": "https://duy7y3nglgmh.cloudfront.net/attendance.png",
+                "primaryAction": [{"type": "SendEvent","arguments": ["attendance"]}]
+            },
+            {
+                "primaryText": "Possession By Team",
+                "imageSource": "https://duy7y3nglgmh.cloudfront.net/possession3.png",
+                "imageScale": "best-fill",
+                "primaryAction": [{"type": "SendEvent","arguments": ["possession"]}]
+            },
+            {
+                "primaryText": "Goals In/Out Of Box",
+                "imageSource": "https://duy7y3nglgmh.cloudfront.net/long_shot.png",
+                "imageScale": "best-fill",
+                "primaryAction": [{"type": "SendEvent","arguments": ["in_out_box"]}]
+            },
+            {
+                "primaryText": "Corners By Team",
+                "imageSource": "https://duy7y3nglgmh.cloudfront.net/corners.png",
+                "imageScale": "best-fill",
+                "primaryAction": [{"type": "SendEvent","arguments": ["corners"]}]
+            },
+            {
+                "primaryText": "Offside",
+                "imageSource": "https://duy7y3nglgmh.cloudfront.net/offside2.png",
+                "imageScale": "best-fit",
+                "primaryAction": [{"type": "SendEvent","arguments": ["offside"]}]
+            },
+            {
+                "primaryText": "VAR Decisions",
+                "imageSource": "https://duy7y3nglgmh.cloudfront.net/var.png",
+                "imageScale": "best-fit",
+                "primaryAction": [{"type": "SendEvent","arguments": ["var"]}]
+            },
+            {
                 "primaryText": "Relegation",
                 "imageSource": "https://duy7y3nglgmh.cloudfront.net/relegation.png",
                 "primaryAction": [{"type": "SendEvent","arguments": ["relegation"]}]
@@ -697,8 +1091,7 @@ datasources2 = {
                 "imageScale": "best-fit",
                 "imageSource": "https://duy7y3nglgmh.cloudfront.net/qr_code.png",
                 "primaryAction": [{"type": "SendEvent","arguments": ["Leave a Review"]}]
-            }
-            
+            }            
         ],
     }                        
 } 
