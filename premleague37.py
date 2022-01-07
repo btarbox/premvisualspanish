@@ -44,7 +44,7 @@ from statshandlers import ResultsHandler, FixturesHandler,TableHandler, load_sta
 from multimedia import ButtonEventHandler, AddTeamIntentHandler, RemoveTeamIntentHandler, go_home, get_line_chart_url, do_line_graph
 from datetime import datetime
 import gettext
-from statshandlers import wrap_language, set_translation, is_spanish,month_trans, output_right_directive
+from statshandlers import wrap_language, set_translation, is_spanish,month_trans, output_right_directive, emit_locale_metric
 lang_translations_en = gettext.translation('base', localedir='locales', languages=['en'])
 lang_translations_en.install()
 lang_translations_sp = gettext.translation('base', localedir='locales', languages=['es'])
@@ -57,7 +57,7 @@ logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 
 SKILL_NAME = "PremierLeague"
-HELP_REPROMPT = 'What can we help you with?'
+HELP_REPROMPT = 'What can  we help you with?'
 
 #sb = SkillBuilder()
 sb = CustomSkillBuilder(api_client=DefaultApiClient())
@@ -65,8 +65,6 @@ sb = CustomSkillBuilder(api_client=DefaultApiClient())
 sns_client = boto3.client('sns')
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
-# table_data = []
-# table_index = 0
 TOKEN = "buttontoken"
 TICK_WIDTH = 3.0
 
@@ -99,6 +97,7 @@ class WelcomeHandler(AbstractRequestHandler):
 
             WELCOME_MESSAGE = _('Welcome to PremierLeague')
             logger.info("In WelcomeHandler {}".format(WELCOME_MESSAGE))
+            emit_locale_metric(handler_input)
         except Exception as ex:
             logging.exception("error at start")
 
@@ -118,14 +117,14 @@ class WelcomeHandler(AbstractRequestHandler):
             welcome = WELCOME_MESSAGE + ",, now available in Spanish,,"
         else:
             welcome = WELCOME_MESSAGE + _(',, The last result was {} and the next match is {},, ').format(speech,speech2)
-        set_time_zone(handler_input)
+        #set_time_zone(handler_input)
 
         if get_supported_interfaces(handler_input).alexa_presentation_apl is not None:
             logger.info("this device has a screen")
-            response = boto3.client("cloudwatch").put_metric_data(
-                Namespace='PremierLeague',
-                MetricData=[{'MetricName': 'InvocationsWithScreen','Timestamp': datetime.now(),'Value': 1,},]
-            )
+            # response = boto3.client("cloudwatch").put_metric_data(
+            #     Namespace='PremierLeague',
+            #     MetricData=[{'MetricName': 'InvocationsWithScreen','Timestamp': datetime.now(),'Value': 1,},]
+            # )
             session_attr = handler_input.attributes_manager.session_attributes
             session_attr["radioButtonText"] = "Form"
             session_attr["screen_displayed"] = True
@@ -154,10 +153,10 @@ class WelcomeHandler(AbstractRequestHandler):
                 )
         else:        
             logger.info("this device does not have a screen")
-            response = boto3.client("cloudwatch").put_metric_data(
-                Namespace='PremierLeague',
-                MetricData=[{'MetricName': 'InvocationsWithOutScreen','Timestamp': datetime.now(),'Value': 1,},]
-            )
+            # response = boto3.client("cloudwatch").put_metric_data(
+            #     Namespace='PremierLeague',
+            #     MetricData=[{'MetricName': 'InvocationsWithOutScreen','Timestamp': datetime.now(),'Value': 1,},]
+            # )
             speech = wrap_language(handler_input, welcome + _(' Say get table, or say a team name '))
             handler_input.response_builder.speak(speech).ask(speech).set_card(SimpleCard("Hello PremierLeague", strip_emotions(speech)))
             return handler_input.response_builder.response
@@ -292,16 +291,6 @@ class TeamResultsHandler(AbstractRequestHandler):
 
         return output_right_directive(handler_input, speech, None, noise3, noise3_max_millis)
         
-        # handler_input.response_builder.ask(speech).set_card(card).add_directive(
-        #       APLARenderDocumentDirective(
-        #         token= "tok",
-        #         document = {"type" : "Link", "src"  : doc},
-        #         datasources = {"user": {"name": speech},"crowd": {"noise": noise3,"start": str(randrange(0, noise3_max_millis))}
-        #         }
-        #         )
-        #     )
-        # return handler_input.response_builder.response
-
 
 class TeamFixturesHandler(AbstractRequestHandler):
     """Handler for TeamFixturesIntent."""
@@ -344,6 +333,9 @@ class TeamFixturesHandler(AbstractRequestHandler):
         return output_right_directive(handler_input, speech, None, noise, noise_max_millis)
 
 
+'''
+By definition this can only be called for a non-screen device
+'''
 class YesHandler(AbstractRequestHandler):
     """Handler for YesIntent."""
 
@@ -352,6 +344,8 @@ class YesHandler(AbstractRequestHandler):
 
     def handle(self, handler_input):
         logger.info("In YesHandler")
+        emit_locale_metric(handler_input)
+
         _ =set_translation(handler_input)
         more = _('Would you like to hear more?')
         logger.info(f"more: {more}")
@@ -390,7 +384,11 @@ class YesHandler(AbstractRequestHandler):
             session_attr["fixture_index"] = fixture_index + 5
             handler_input.attributes_manager.session_attributes = session_attr
             speech, card_text = load_stats_ng(handler_input, 5, "fixtures2", _(" versus "), " ", "  ", 0, 2, 1, "", fixture_index)
+            logger.info("saying fixture 2" + speech)
+
             speech = intro + speech + _('Would you like to hear more?')
+            if not is_spanish(handler_input):
+                speech = speech.replace("oh clock", "")
             card = SimpleCard("Premier League", card_text)
             if get_supported_interfaces(handler_input).alexa_presentation_apl is not None:
                 card = None
@@ -475,13 +473,6 @@ class CancelOrStopIntentHandler(AbstractRequestHandler):
                 is_intent_name("AMAZON.StopIntent")(handler_input))
 
     def handle(self, handler_input):
-        # _ =set_translation(handler_input)
-        # logger.info("In CancelOrStopIntentHandler")
-        # STOP_MESSAGE = _('Okay, hope to see you next time!')
-        # if is_spanish(handle_input):
-        #     STOP_MESSAGE = wrap_language(handler_input, STOP_MESSAGE) 
-        # logger.info("at CancelOrStopIntentHandler " + STOP_MESSAGE)
-        # handler_input.response_builder.speak(STOP_MESSAGE)
         return(finish(handler_input))
 
 
@@ -604,7 +595,7 @@ sb.add_request_handler(AddAllTeamsIntentHandler())
 sb.add_exception_handler(CatchAllExceptionHandler())
 
 # TODO: Uncomment the following lines of code for request, response logs.
-#sb.add_global_request_interceptor(RequestLogger())
+sb.add_global_request_interceptor(RequestLogger())
 #sb.add_global_response_interceptor(ResponseLogger())
 
 # Handler name that is used on AWS lambda
@@ -649,9 +640,9 @@ def finish(handler_input):
             the_text = "if you're enjoying this, a review would really be appreciated, thank you"
             if is_spanish(handler_input):
                 the_text = "Si estás disfrutando de esto, una reseña realmente sería apreciada, gracias"
-        response = boto3.client("cloudwatch").put_metric_data(
-            Namespace='PremierLeague',
-            MetricData=[{'MetricName': 'AskForReview','Timestamp': datetime.now(),'Value': 1,},]
+            response = boto3.client("cloudwatch").put_metric_data(
+                Namespace='PremierLeague',
+                MetricData=[{'MetricName': 'AskForReview','Timestamp': datetime.now(),'Value': 1,},]
         )
         the_text =  wrap_language(handler_input, the_text)
         return(handler_input.response_builder.speak(the_text).set_should_end_session(True).response)
