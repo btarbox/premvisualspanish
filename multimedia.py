@@ -953,6 +953,7 @@ def corners(handler_input):
               )
             ).response
         )
+        
 def offside(handler_input):
     _ = set_translation(handler_input)
     ds = get_one_stat_url(handler_input,_("Offside"), _("Offside"), "offside")
