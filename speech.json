@@ -307,9 +307,77 @@
                         "add all teams",
                         "add all"
                     ]
+                },
+                {
+                    "name": "WhatCanIBuyIntent",
+                    "slots": [],
+                    "samples": [
+                        "what can I shop for",
+                        "tell me what I can buy",
+                        "what can I purchase",
+                        "what can I buy"
+                    ]
+                },
+                {
+                    "name": "BuyIntent",
+                    "slots": [
+                        {
+                            "name": "ProductName",
+                            "type": "LIST_OF_PRODUCT_NAMES"
+                        }
+                    ],
+                    "samples": [
+                        "buy {ProductName}",
+                        "purchase {ProductName}",
+                        "buy the {ProductName}"
+                    ]
+                },
+                {
+                    "name": "RefundSkillItemIntent",
+                    "slots": [
+                        {
+                            "name": "ProductName",
+                            "type": "LIST_OF_PRODUCT_NAMES"
+                        }
+                    ],
+                    "samples": [
+                        "cancel my subscription",
+                        "refund my purchase",
+                        "refund",
+                        "return {ProductName}",
+                        "refund {ProductName}",
+                        "want a refund for {ProductName}",
+                        "would like to return {ProductName}",
+                        "cancel {ProductName}"
+                    ]
+                },
+                {
+                    "name": "WhatDidIBuyIntent",
+                    "slots": [],
+                    "samples": [
+                        "what subscriptions do I have",
+                        "what have I purchased",
+                        "what did I buy"
+                    ]
                 }
             ],
             "types": [
+                {
+                    "name": "LIST_OF_PRODUCT_NAMES",
+                    "values": [
+                        {
+                            "id": "reference_name",
+                            "name": {
+                                "value": "AdvancedAnalyticGraphs",
+                                "synonyms": [
+                                    "advanced",
+                                    "advanced analytics",
+                                    "advanced analytic graphs"
+                                ]
+                            }
+                        }
+                    ]
+                },
                 {
                     "name": "plteam",
                     "values": [
