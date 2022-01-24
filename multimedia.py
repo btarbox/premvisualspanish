@@ -30,6 +30,8 @@ from statshandlers import wrap_language, set_translation, is_spanish, day_of_wee
 from statshandlers import emit_locale_metric
 import traceback
 import copy
+import time
+from isp import skill_has_products, list_purchasable_products, buy_product, ds2_advanced_or_not
 
 bucket = "bpltables"
 
@@ -126,7 +128,11 @@ class ButtonEventHandler(AbstractRequestHandler):
                 if is_spanish(handler_input):
                     direct_object = direct_object.replace("Fixtures","Encuentros").replace("Results","Resultados").replace("Form","Forma")
             return (handler_input.response_builder.speak(wrap_language(handler_input, _("Ok, we'll show you team {}")).format(direct_object)).add_directive(ExecuteCommandsDirective(token=TOKEN,commands=button_commands)).response)
-        
+
+        if first_arg == "purchase":
+            the_text = "A set of advanced analytic graphs a available, say, purchase advanced, to give them a try"
+            return handler_input.response_builder.speak(the_text).ask("press a button").response
+
         if first_arg == "goaldifference":
             return(goaldifference(handler_input))
 
@@ -294,7 +300,7 @@ def go_home(handler_input):
                         "token" : "my token",
                         "src"  : "doc://alexa/apl/documents/GridList"
                     },
-                    datasources = datasourcessp if is_spanish(handler_input) else datasources2 
+                    datasources = datasourcessp if is_spanish(handler_input) else ds2_advanced_or_not(handler_input) 
                   )
                 ).response
             )
@@ -389,17 +395,13 @@ def fix_logo_name(name):
     else:
         return name
 
-        
-def fixtures_visual(handler_input):
+
+def load_fixture_data(handler_input):
+    lines_to_display = 35
+    table_index = 0
+    speech, ignore = load_stats_ng(handler_input, lines_to_display, "fixtures2", ".", ".", ";", 0, 2, 1, "")
+    first_split = speech.split(";")
     try:
-        logger.info("at fixtures_visual")
-        _ = set_translation(handler_input)
-        lines_to_display = 21
-        if int(handler_input.request_envelope.context.viewport.pixel_height) == 1920:
-            lines_to_display = 21
-        table_index = 0
-        speech, ignore = load_stats_ng(handler_input, lines_to_display, "fixtures2", ".", ".", ";", 0, 2, 1, "")
-        first_split = speech.split(";")
         for s in first_split:
         	for s2 in s.split(","):
         		if(len(s2) > 0):
@@ -414,7 +416,7 @@ def fixtures_visual(handler_input):
         			    results_table["dataTable"]["properties"]["rows"][table_index]["cells"][0]["text"] = bar
         			    results_table["dataTable"]["properties"]["rows"][table_index]["cells"][2]["text"] = date_split[1]
         			    results_table["dataTable"]["properties"]["rows"][table_index]["cells"][1]["text"] = month2
-        			    #logger.info("setting a date " + s2 + " at index " + str(table_index))
+        			    logger.info("setting a date " + s2 + " at index " + str(table_index))
         			    table_index += 1
         			else:
         				line = ""
@@ -429,9 +431,20 @@ def fixtures_visual(handler_input):
         				    #logger.info(f"Set team column {s3}")
         				    results_table["dataTable"]["properties"]["rows"][table_index]["cells"][sub_index]["text"] = s3
         				    results_table["dataTable"]["properties"]["rows"][table_index]["cells"][sub_index]["fontSize"] = "5vh"
-        				    #logger.info("setting a team or time" + " at index " + str(table_index))
+        				    logger.info("setting a team or time" + " at index " + str(table_index))
         				    sub_index += 1
         	table_index += 1
+    except Exception as ex:
+        logger.info("hit exception")
+        logger.error(ex)        
+    
+    
+def fixtures_visual(handler_input):
+    try:
+        logger.info("at fixtures_visual")
+        _ = set_translation(handler_input)
+        load_fixture_data(handler_input)
+        
     except Exception as ex:
         logger.info("hit exception")
         logger.error(ex)        
@@ -669,11 +682,9 @@ def championship_visual(handler_input):
         )
         
     
-def table(handler_input):
+def load_main_table_data(handler_input):
     _ = set_translation(handler_input)
-    logger.info("at table chart")
     reload_main_table_as_needed()
-
     try:
         logger.info(str(short_names))
         for index in range(0, 20):
@@ -705,6 +716,43 @@ def table(handler_input):
     except Exception as ex:
         logger.info("hit exception")
         logger.error(ex)        
+
+
+def portrait_table_results(handler_input):
+    try:
+        # get_progressive_response(handler_input)
+        load_main_table_data(handler_input)
+        load_fixture_data(handler_input)
+        combined_ds = {}
+        combined_ds["dataTable"] = foo_table["dataTable"]
+        combined_ds["dataTable2"] = results_table["dataTable"]
+        
+        doc = _load_apl_document("portrait_table.json")
+        return (
+            handler_input.response_builder
+                .speak("Here is the table, press Back to return")
+                .set_should_end_session(False)          
+                .add_directive( 
+                  APLRenderDocumentDirective(
+                    token = "developer-provided-string",
+                    document = doc,
+                    datasources = combined_ds 
+                  )
+                ).response
+            )
+    except Exception as ex:
+        logger.info("hit exception")
+        logger.error(ex)        
+        traceback.print_exc()
+
+    
+def table(handler_input):
+    _ = set_translation(handler_input)
+    logger.info("at table chart")
+    if int(handler_input.request_envelope.context.viewport.pixel_height) == 1920:
+        return portrait_table_results(handler_input)
+
+    load_main_table_data(handler_input)
     
     try:
         doc = _load_apl_document("table.json")
@@ -738,19 +786,18 @@ def _load_apl_document(file_path):
     with open(file_path) as f:
         return json.load(f)
 
-# def get_progressive_response(handler_input):
-#     try:
-#         request_id_holder = handler_input.request_envelope.request.request_id
-#         directive_header = Header(request_id=request_id_holder)
-#         speech = SpeakDirective(speech="Getting the table")
-#         directive_request = SendDirectiveRequest(header=directive_header, directive=speech)
-#         directive_service_client = handler_input.service_client_factory.get_directive_service()
-#         directive_service_client.enqueue(directive_request)
-#     except Exception as ex:
-#         logger.info("hit exception")
-#         logger.error(ex)        
+def get_progressive_response(handler_input):
+    # type: (HandlerInput) -> None
+    request_id_holder = handler_input.request_envelope.request.request_id
+    directive_header = Header(request_id=request_id_holder)
+    speech = SpeakDirective(speech="Ok, give me a minute")
+    directive_request = SendDirectiveRequest(
+        header=directive_header, directive=speech)
 
-
+    directive_service_client = handler_input.service_client_factory.get_directive_service()
+    directive_service_client.enqueue(directive_request)
+    time.sleep(5)
+    return
 
                 
 def goaldifference(handler_input):
