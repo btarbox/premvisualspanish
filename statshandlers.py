@@ -8,7 +8,7 @@ from ask_sdk_model.interfaces.alexa.presentation.apl import RenderDocumentDirect
 from ask_sdk_model.interfaces.alexa.presentation.apla import RenderDocumentDirective as APLARenderDocumentDirective
 from ask_sdk_core.utils import get_supported_interfaces
 from ask_sdk_core.utils.viewport import get_viewport_profile
-
+from ask_sdk_core.utils.request_util import is_new_session
 from ask_sdk_model.ui import SimpleCard, StandardCard, Image
 from ask_sdk_model import Response
 import shared
@@ -24,8 +24,12 @@ from shared import extra_cmd_prompts, doc, noise, noise2, noise3, noise_max_mill
 from shared import noise2_max_millis, noise3_max_millis, datasources2, datasourcessp, test_speach_data, noise_data, teamsdatasource
 from datetime import datetime
 import spanishnumber
+#import isp
+#from isp import ds2_advanced_or_not
 #from multimedia import yellow_red
 import gettext
+import traceback
+
 lang_translations_en = gettext.translation('base', localedir='locales', languages=['en'])
 lang_translations_en.install()
 lang_translations_sp = gettext.translation('base', localedir='locales', languages=['es'])
@@ -86,6 +90,18 @@ reload_main_table_as_needed
 load_main_table
 '''
 
+def set_session_start_time(handler_input):
+    try:
+        if is_new_session(handler_input):
+            logger.info("at set_session_start_time")
+            session_attr = handler_input.attributes_manager.session_attributes
+            session_attr["session_start_time"] = datetime.timestamp(datetime.now())
+            handler_input.attributes_manager.session_attributes = session_attr
+    except Exception as ex:
+        logger.error(ex)
+        traceback.print_exc()
+        
+    
 def wrap_language(handler_input, text):
     spanish_prefix = "<lang xml:lang='es-US'><voice name='Miguel'>"
     spanish_suffix = "</voice></lang>"
@@ -170,17 +186,22 @@ class GoalsHandler(AbstractRequestHandler):
         return goal_hander(handler_input)
         
 def goal_hander(handler_input):
-    _ = set_translation(handler_input)
-    if "goals" in extra_cmd_prompts:
-        del extra_cmd_prompts["goals"]
-    goal_phrases = [_("the players with the most goals are,"),_("the highest scorers are, "),_("the top scorers are")]
-    intro = random_phrase(0,2, goal_phrases)
-    
-    speech, card_text = load_stats(5, "goldenboot", _(", with "), _(" has "), "  ", 1, 2, 4)
-    speech = intro + speech + ',' + random_prompt(handler_input)
-    
-    image_url = "https://duy7y3nglgmh.cloudfront.net/Depositphotos_goal.jpg"
-    return output_right_directive(handler_input, speech, image_url, noise, noise_max_millis)
+    try:
+        _ = set_translation(handler_input)
+        if "goals" in extra_cmd_prompts:
+            del extra_cmd_prompts["goals"]
+        goal_phrases = [_("the players with the most goals are,"),_("the highest scorers are, "),_("the top scorers are")]
+        intro = random_phrase(0,2, goal_phrases)
+        
+        speech, card_text = load_stats(5, "goldenboot", _(", with "), _(" has "), "  ", 1, 2, 4)
+        speech = intro + speech + ',' + random_prompt(handler_input)
+        
+        image_url = "https://duy7y3nglgmh.cloudfront.net/Depositphotos_goal.jpg"
+        logger.info("about to call output_right_directive")
+        return output_right_directive(handler_input, speech, image_url, noise, noise_max_millis)
+    except Exception as ex:
+        logger.error(ex)
+        traceback.print_exc()
     
 
 class ListTeamNamesHandler(AbstractRequestHandler):
@@ -258,6 +279,9 @@ def foul_handler(handler_input):
 
 def output_right_directive(handler_input, the_text, image_url, noise, noise_max):
     _ = set_translation(handler_input)
+    logger.info("at output_right_directive")
+    set_session_start_time(handler_input)
+        
     emit_locale_metric(handler_input)
     session_attr = handler_input.attributes_manager.session_attributes
     already_displayed_screen = session_attr.get("screen_displayed", False)
@@ -822,7 +846,7 @@ def suggest(handler_input):
         logger.info("suggesting " + value)
         return value
     else:
-        load_suggestions()    
+        load_suggestions(handler_input)    
     return ""
 
 
