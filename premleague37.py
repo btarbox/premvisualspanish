@@ -50,6 +50,10 @@ lang_translations_en.install()
 lang_translations_sp = gettext.translation('base', localedir='locales', languages=['es'])
 lang_translations_sp.install()
 from multimedia import results_visual
+from statshandlers import set_session_start_time
+from isp import skill_has_products, list_purchasable_products, buy_product, buy_response, refund_product, cancel_response
+from isp import ds2_advanced_or_not
+
 #_ = gettext.translation('base', localedir='locales', languages=['en']).gettext
 #tr = lang_translations_en.gettext
 
@@ -80,11 +84,22 @@ class WelcomeHandler(AbstractRequestHandler):
 
     def handle(self, handler_input):
         try:
-
             logger.info("the local is " + handler_input.request_envelope.request.locale + " " + str(is_spanish(handler_input)))
             _ =set_translation(handler_input)
+            set_session_start_time(handler_input)
+            my_products = skill_has_products(handler_input)
+            local_ds2 = ds2_advanced_or_not(handler_input)
+            # if my_products is None:
+            #     datasources2["gridListData"]["listItems"].pop(7)
+            #     datasources2["gridListData"]["listItems"].pop(7)
+            #     datasources2["gridListData"]["listItems"].pop(7)
+            #     datasources2["gridListData"]["listItems"].pop(7)
+            #     datasources2["gridListData"]["listItems"].pop(7)
+            #     datasources2["gridListData"]["listItems"].pop(7)
+            logger.info(f"ISP: This user has {my_products} enabled")
+            list_purchasable_products(handler_input)
             doc = _load_apl_document("table.json")
-            logger.info("TABLE.JSON " + str(doc))
+            #logger.info("TABLE.JSON " + str(doc))
             #language_now = "SPANISH" if _ == lang_translations_sp.gettext else "ENGLISH"
             #logger.info(language_now)
             #tr = lang_translations_en.gettext
@@ -101,65 +116,59 @@ class WelcomeHandler(AbstractRequestHandler):
         except Exception as ex:
             logging.exception("error at start")
 
-        
-        load_suggestions(handler_input)
-        speech, card_text = load_stats_ng(handler_input, 1, "prevWeekFixtures", "  ", "  ", "  ", 0, 2, 1, "")
-        if is_spanish(handler_input):
-            str1 = speech.replace("beat", "ganó").replace("lost to", "perdió ante").replace("drew", "Empate").replace(" to ", " a ")
-            speech = str1
-        speech2, card_text2 = load_stats_ng(handler_input, 1, "fixtures2", _(' versus '), _(' at '), "  ", 0, 2, 1, "")
-        speech2 = day_of_week_trans(handler_input, speech2)
-        speech2 = month_trans(handler_input,speech2)
-
-        x = randrange(0,100)
-        logger.info(f"****  Is english {not is_spanish(handler_input)} rand {x}  { (x < 33)}")
-        if (not is_spanish(handler_input)) and (x < 33):
-            welcome = WELCOME_MESSAGE + ",, now available in Spanish,,"
-        else:
-            welcome = WELCOME_MESSAGE + _(',, The last result was {} and the next match is {},, ').format(speech,speech2)
-        #set_time_zone(handler_input)
-
-        if get_supported_interfaces(handler_input).alexa_presentation_apl is not None:
-            logger.info("this device has a screen")
-            # response = boto3.client("cloudwatch").put_metric_data(
-            #     Namespace='PremierLeague',
-            #     MetricData=[{'MetricName': 'InvocationsWithScreen','Timestamp': datetime.now(),'Value': 1,},]
-            # )
-            session_attr = handler_input.attributes_manager.session_attributes
-            session_attr["radioButtonText"] = "Form"
-            session_attr["screen_displayed"] = True
-            handler_input.attributes_manager.session_attributes = session_attr
-            this_profile = str(get_viewport_profile(handler_input.request_envelope))
-            item_heights = {"ViewportProfile.HUB_LANDSCAPE_SMALL": "75%", "ViewportProfile.HUB_LANDSCAPE_MEDIUM": "65%", "ViewportProfile.HUB_LANDSCAPE_LARGE": "55%"}
-            this_height = item_heights.get(this_profile, "")
-            datasources2["gridListData"]["listItemHeight"] = this_height
-            logger.info(f"** Profile {this_profile} height {this_height}")
-            
-            return (
-                handler_input.response_builder
-                    .speak(wrap_language(handler_input, welcome + _(" press a button or scroll to see more options")))
-                    .set_should_end_session(False)          
-                    .add_directive( 
-                      APLRenderDocumentDirective(
-                        token= TOKEN,
-                        document = {
-                            "type" : "Link",
-                            "token" : TOKEN,
-                            "src"  : "doc://alexa/apl/documents/GridList"
-                        },
-                        datasources = datasourcessp if is_spanish(handler_input) else datasources2 
-                      )
-                    ).response
-                )
-        else:        
-            logger.info("this device does not have a screen")
-            # response = boto3.client("cloudwatch").put_metric_data(
-            #     Namespace='PremierLeague',
-            #     MetricData=[{'MetricName': 'InvocationsWithOutScreen','Timestamp': datetime.now(),'Value': 1,},]
-            # )
-            speech = wrap_language(handler_input, welcome + _(' Say get table, or say a team name '))
-            handler_input.response_builder.speak(speech).ask(speech).set_card(SimpleCard("Hello PremierLeague", strip_emotions(speech)))
-            return handler_input.response_builder.response
+        try:
+            load_suggestions(handler_input)
+            speech, card_text = load_stats_ng(handler_input, 1, "prevWeekFixtures", "  ", "  ", "  ", 0, 2, 1, "")
+            if is_spanish(handler_input):
+                str1 = speech.replace("beat", "ganó").replace("lost to", "perdió ante").replace("drew", "Empate").replace(" to ", " a ")
+                speech = str1
+            speech2, card_text2 = load_stats_ng(handler_input, 1, "fixtures2", _(' versus '), _(' at '), "  ", 0, 2, 1, "")
+            speech2 = day_of_week_trans(handler_input, speech2)
+            speech2 = month_trans(handler_input,speech2)
+    
+            x = randrange(0,100)
+            logger.info(f"****  Is english {not is_spanish(handler_input)} rand {x}  { (x < 33)}")
+            if (not is_spanish(handler_input)) and (x < 33):
+                welcome = WELCOME_MESSAGE + ",, now available in Spanish,,"
+            else:
+                welcome = WELCOME_MESSAGE + _(',, The last result was {} and the next match is {},, ').format(speech,speech2)
+            if get_supported_interfaces(handler_input).alexa_presentation_apl is not None:
+                logger.info("this device has a screen")
+                session_attr = handler_input.attributes_manager.session_attributes
+                session_attr["radioButtonText"] = "Form"
+                session_attr["screen_displayed"] = True
+                handler_input.attributes_manager.session_attributes = session_attr
+                this_profile = str(get_viewport_profile(handler_input.request_envelope))
+                item_heights = {"ViewportProfile.HUB_LANDSCAPE_SMALL": "75%", "ViewportProfile.HUB_LANDSCAPE_MEDIUM": "65%", "ViewportProfile.HUB_LANDSCAPE_LARGE": "55%"}
+                this_height = item_heights.get(this_profile, "")
+                local_ds2["gridListData"]["listItemHeight"] = this_height
+                logger.info(f"** Profile {this_profile} height {this_height}")
+                
+                return (
+                    handler_input.response_builder
+                        .speak(wrap_language(handler_input, welcome + _(" press a button or scroll to see more options")))
+                        .set_should_end_session(False)          
+                        .add_directive( 
+                          APLRenderDocumentDirective(
+                            token= TOKEN,
+                            document = {
+                                "type" : "Link",
+                                "token" : TOKEN,
+                                "src"  : "doc://alexa/apl/documents/GridList"
+                            },
+                            datasources = datasourcessp if is_spanish(handler_input) else local_ds2 
+                          )
+                        ).response
+                    )
+            else:        
+                logger.info("this device does not have a screen")
+                speech = wrap_language(handler_input, welcome + _(' Say get table, or say a team name '))
+                handler_input.response_builder.speak(speech).ask(speech).set_card(SimpleCard("Hello PremierLeague", strip_emotions(speech)))
+                return handler_input.response_builder.response
+        except Exception as ex:
+            logging.exception("error at start2")
+            logger.error(ex)
+            traceback.print_exc()
 
 
 
@@ -448,6 +457,70 @@ class MainScreenIntentHandler(AbstractRequestHandler):
     def handle(self, handler_input):
         return go_home(handler_input)
 
+class RefundSkillItemIntentHandler(AbstractRequestHandler):
+    def can_handle(self, handler_input):
+        return is_intent_name("RefundSkillItemIntent")(handler_input)
+        
+    def handle(self, handler_input):
+        logger.info("In RefundSkillItemIntentHandler")
+        return refund_product(handler_input)
+
+
+class CancelResponseHandler(AbstractRequestHandler):
+    """This handles the Connections.Response event after a buy occurs."""
+    def can_handle(self, handler_input):
+        return (is_request_type("Connections.Response")(handler_input) and
+                handler_input.request_envelope.request.name == "Cancel")
+
+    def handle(self, handler_input):
+        logger.info("In CancelResponseHandler")
+        return cancel_response(handler_input)
+
+
+class BuyIntentHandler(AbstractRequestHandler):
+    def can_handle(self, handler_input):
+        return is_intent_name("BuyIntent")(handler_input)
+        
+    def handle(self, handler_input):
+        logger.info("In BuyIntentHandler")
+        return buy_product(handler_input)
+
+
+class BuyResponseHandler(AbstractRequestHandler):
+    """This handles the Connections.Response event after a buy occurs."""
+    def can_handle(self, handler_input):
+        return (is_request_type("Connections.Response")(handler_input) and
+                handler_input.request_envelope.request.name == "Buy")
+
+    def handle(self, handler_input):
+        logger.info("In BuyResponseHandler")
+        return buy_response(handler_input)
+
+
+class WhatCanIBuyHandler(AbstractRequestHandler):
+    def can_handle(self, handler_input):
+        return is_intent_name("WhatCanIBuyIntent")(handler_input)
+
+    def handle(self, handler_input):
+        logger.info("In WhatCanIBuyHandler")
+        speech = '''You can buy the Advanced Analytics Charts which offers many new ways to look at Premier League data
+            " including Vee Eh Are, corners, possession, attendance and more.  Say puchased advanced for a seven day trial'''
+        return output_right_directive(handler_input, speech, None, noise, noise_max_millis)
+
+
+class WhatDidIBuyHandler(AbstractRequestHandler):
+    def can_handle(self, handler_input):
+        return is_intent_name("WhatDidIBuyIntent")(handler_input)
+
+    def handle(self, handler_input):
+        logger.info("In WhatDidIBuyHandler")
+        purchased = skill_has_products(handler_input)
+        if purchased is None:
+            speech = "You have no purchases"
+        else:
+            speech = "You have purchased Advanced Analytics charts"
+        return output_right_directive(handler_input, speech, None, noise, noise_max_millis)
+
 
 class HelpIntentHandler(AbstractRequestHandler):
     """Handler for Help Intent."""
@@ -473,6 +546,7 @@ class CancelOrStopIntentHandler(AbstractRequestHandler):
                 is_intent_name("AMAZON.StopIntent")(handler_input))
 
     def handle(self, handler_input):
+
         return(finish(handler_input))
 
 
@@ -532,10 +606,10 @@ class CatchAllExceptionHandler(AbstractExceptionHandler):
             logger.info("ignore exception during exception handler")
 
         message = {"CatchAllExceptionHandler": "was called"}                    # UNCOMMENT THIS ONCE WE GO LIVE
-        # sns_client.publish(
-        #     TargetArn="arn:aws:sns:us-east-1:747458360727:lambdatop",
-        #     Message=json.dumps({'default': json.dumps(message)}),
-        #     MessageStructure='json')
+        sns_client.publish(
+            TargetArn="arn:aws:sns:us-east-1:747458360727:lambdatop",
+            Message=json.dumps({'default': json.dumps(message)}),
+            MessageStructure='json')
         apla_runtime_error = _("Sorry, we did not understand, can you try again?")
         handler_input.response_builder.speak(apla_runtime_error).ask(HELP_REPROMPT)
 
@@ -590,13 +664,20 @@ sb.add_request_handler(AddTeamIntentHandler())
 sb.add_request_handler(RemoveTeamIntentHandler())
 sb.add_request_handler(MainScreenIntentHandler())
 sb.add_request_handler(AddAllTeamsIntentHandler())
+sb.add_request_handler(BuyIntentHandler())
+sb.add_request_handler(RefundSkillItemIntentHandler())
+sb.add_request_handler(BuyResponseHandler())
+sb.add_request_handler(CancelResponseHandler())
+sb.add_request_handler(WhatCanIBuyHandler())
+sb.add_request_handler(WhatDidIBuyHandler())
 
 # Register exception handlers
 sb.add_exception_handler(CatchAllExceptionHandler())
 
 # TODO: Uncomment the following lines of code for request, response logs.
-sb.add_global_request_interceptor(RequestLogger())
+#sb.add_global_request_interceptor(RequestLogger())
 #sb.add_global_response_interceptor(ResponseLogger())
+
 
 # Handler name that is used on AWS lambda
 lambda_handler = sb.lambda_handler()
@@ -612,10 +693,28 @@ def find_team_index(team_id):
             return index
     return -1
 
+def record_session_open_time(handler_input):
+    try:
+        session_attr = handler_input.attributes_manager.session_attributes
+        start_time = session_attr.get("session_start_time", 0)
+        if start_time != 0:
+            elapsed = datetime.timestamp(datetime.now()) - int(start_time)
+            open_time = elapsed
+            logger.info(f"session was open for {int(elapsed)} seconds")
+            cw = boto3.client("cloudwatch")
+            cw.put_metric_data(
+                Namespace='PremierLeague',
+                MetricData=[{'MetricName': 'Sess_open_time','Timestamp': datetime.now(),'Value': open_time,},]
+            )
+    except Exception as ex:
+         logger.error(ex)
+
 
 def finish(handler_input):
     _ =set_translation(handler_input)
     logger.info("at finish")
+    record_session_open_time(handler_input)
+    
     goodbyes = [_("see you later"), _("thank you"), _("ok, see you next time"), _("see you around the league"), _("Catch ya later"),
                 _("Take it easy"), _("ta ta"), _("take care"), _("cheers"), _("ok, I'm out")]
     if get_supported_interfaces(handler_input).alexa_presentation_apl is not None:
