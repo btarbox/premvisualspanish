@@ -1,4 +1,7 @@
 # this_is_shared = "test of shared global"
+#import copy
+#from isp import skill_has_products
+
 extra_cmd_prompts = {}
 noise  = "https://duy7y3nglgmh.cloudfront.net/FootballCrowdSound.mp3"
 noise2 = "https://duy7y3nglgmh.cloudfront.net/SoccerStadiumSoundEffect.mp3"
@@ -155,9 +158,102 @@ results_table = {
                 {"backgroundColor": "grey","cells": [{"text": "a"},{"text": "b"},{"text": "c"}]},
                 {"backgroundColor": "grey","cells": [{"text": "a"},{"text": "b"},{"text": "c"}]},
                 {"backgroundColor": "grey","cells": [{"text": "a"},{"text": "b"},{"text": "c"}]},
+                {"backgroundColor": "grey","cells": [{"text": "a"},{"text": "b"},{"text": "c"}]},
+                {"backgroundColor": "grey","cells": [{"text": "a"},{"text": "b"},{"text": "c"}]},
+                {"backgroundColor": "grey","cells": [{"text": "a"},{"text": "b"},{"text": "c"}]},
+                {"backgroundColor": "grey","cells": [{"text": "a"},{"text": "b"},{"text": "c"}]},
+                {"backgroundColor": "grey","cells": [{"text": "a"},{"text": "b"},{"text": "c"}]},
+                {"backgroundColor": "grey","cells": [{"text": "a"},{"text": "b"},{"text": "c"}]},
+                {"backgroundColor": "grey","cells": [{"text": "a"},{"text": "b"},{"text": "c"}]},
+                {"backgroundColor": "grey","cells": [{"text": "a"},{"text": "b"},{"text": "c"}]},
             ]
         }
     }
+}
+
+portrait_table_results = {
+    "dataTable": {
+        "type": "object",
+        "back": "Back",
+        "properties": {
+            "headings": [
+                "",
+                "Team",
+                "Games",
+                "Wins",
+                "Draws",
+                "Losses",
+                "GF",
+                "GA",
+                "GD",
+                "Points"                
+                    ],
+            "rows": [
+                {"backgroundColor": "goldenrod","cells": [{"text": "a"},{"text": "b"},{"text": "c"},{"text": "d"},{"text": "e"},{"text": "f"},{"text": "g"},{"text": "h"},{"text": "I"},{"text": "J"}]},
+                {"backgroundColor": "green","cells": [{"text": "a"},{"text": "b"},{"text": "c"},{"text": "d"},{"text": "e"},{"text": "f"},{"text": "g"},{"text": "h"},{"text": "I"},{"text": "J"}]},
+                {"backgroundColor": "green","cells": [{"text": "a"},{"text": "b"},{"text": "c"},{"text": "d"},{"text": "e"},{"text": "f"},{"text": "g"},{"text": "h"},{"text": "I"},{"text": "J"}]},
+                {"backgroundColor": "green","cells": [{"text": "a"},{"text": "b"},{"text": "c"},{"text": "d"},{"text": "e"},{"text": "f"},{"text": "g"},{"text": "h"},{"text": "I"},{"text": "J"}]},
+                {"backgroundColor": "blue","cells": [{"text": "a"},{"text": "b"},{"text": "c"},{"text": "d"},{"text": "e"},{"text": "f"},{"text": "g"},{"text": "h"},{"text": "I"},{"text": "J"}]},
+                {"backgroundColor": "blue","cells": [{"text": "a"},{"text": "b"},{"text": "c"},{"text": "d"},{"text": "e"},{"text": "f"},{"text": "g"},{"text": "h"},{"text": "I"},{"text": "J"}]},
+                {"backgroundColor": "black","cells": [{"text": "a"},{"text": "b"},{"text": "c"},{"text": "d"},{"text": "e"},{"text": "f"},{"text": "g"},{"text": "h"},{"text": "I"},{"text": "J"}]},
+                {"backgroundColor": "black","cells": [{"text": "a"},{"text": "b"},{"text": "c"},{"text": "d"},{"text": "e"},{"text": "f"},{"text": "g"},{"text": "h"},{"text": "I"},{"text": "J"}]},
+                {"backgroundColor": "black","cells": [{"text": "a"},{"text": "b"},{"text": "c"},{"text": "d"},{"text": "e"},{"text": "f"},{"text": "g"},{"text": "h"},{"text": "I"},{"text": "J"}]},
+                {"backgroundColor": "black","cells": [{"text": "a"},{"text": "b"},{"text": "c"},{"text": "d"},{"text": "e"},{"text": "f"},{"text": "g"},{"text": "h"},{"text": "I"},{"text": "J"}]},
+                {"backgroundColor": "black","cells": [{"text": "a"},{"text": "b"},{"text": "c"},{"text": "d"},{"text": "e"},{"text": "f"},{"text": "g"},{"text": "h"},{"text": "I"},{"text": "J"}]},
+                {"backgroundColor": "black","cells": [{"text": "a"},{"text": "b"},{"text": "c"},{"text": "d"},{"text": "e"},{"text": "f"},{"text": "g"},{"text": "h"},{"text": "I"},{"text": "J"}]},
+                {"backgroundColor": "black","cells": [{"text": "a"},{"text": "b"},{"text": "c"},{"text": "d"},{"text": "e"},{"text": "f"},{"text": "g"},{"text": "h"},{"text": "I"},{"text": "J"}]},
+                {"backgroundColor": "black","cells": [{"text": "a"},{"text": "b"},{"text": "c"},{"text": "d"},{"text": "e"},{"text": "f"},{"text": "g"},{"text": "h"},{"text": "I"},{"text": "J"}]},
+                {"backgroundColor": "black","cells": [{"text": "a"},{"text": "b"},{"text": "c"},{"text": "d"},{"text": "e"},{"text": "f"},{"text": "g"},{"text": "h"},{"text": "I"},{"text": "J"}]},
+                {"backgroundColor": "black","cells": [{"text": "a"},{"text": "b"},{"text": "c"},{"text": "d"},{"text": "e"},{"text": "f"},{"text": "g"},{"text": "h"},{"text": "I"},{"text": "J"}]},
+                {"backgroundColor": "black","cells": [{"text": "a"},{"text": "b"},{"text": "c"},{"text": "d"},{"text": "e"},{"text": "f"},{"text": "g"},{"text": "h"},{"text": "I"},{"text": "J"}]},
+                {"backgroundColor": "red","cells": [{"text": "a"},{"text": "b"},{"text": "c"},{"text": "d"},{"text": "e"},{"text": "f"},{"text": "g"},{"text": "h"},{"text": "I"},{"text": "J"}]},
+                {"backgroundColor": "red","cells": [{"text": "a"},{"text": "b"},{"text": "c"},{"text": "d"},{"text": "e"},{"text": "f"},{"text": "g"},{"text": "h"},{"text": "I"},{"text": "J"}]},
+                {"backgroundColor": "red","cells": [{"text": "a"},{"text": "b"},{"text": "c"},{"text": "d"},{"text": "e"},{"text": "f"},{"text": "g"},{"text": "h"},{"text": "I"},{"text": "J"}]},
+                    
+            ]
+        }
+    },    
+    "dataTable2": {
+        "type": "object",
+        "back": "Back",
+        "properties": {
+            "headings": [
+                "",
+                "",
+                ""             
+                    ],
+            "rows": [
+                {"backgroundColor": "grey","cells": [{"text": "a"},{"text": "b"},{"text": "c"}]},
+                {"backgroundColor": "grey","cells": [{"text": "a"},{"text": "b"},{"text": "c"}]},
+                {"backgroundColor": "grey","cells": [{"text": "a"},{"text": "b"},{"text": "c"}]},
+                {"backgroundColor": "grey","cells": [{"text": "a"},{"text": "b"},{"text": "c"}]},
+                {"backgroundColor": "grey","cells": [{"text": "a"},{"text": "b"},{"text": "c"}]},
+                {"backgroundColor": "grey","cells": [{"text": "a"},{"text": "b"},{"text": "c"}]},
+                {"backgroundColor": "grey","cells": [{"text": "a"},{"text": "b"},{"text": "c"}]},
+                {"backgroundColor": "grey","cells": [{"text": "a"},{"text": "b"},{"text": "c"}]},
+                {"backgroundColor": "grey","cells": [{"text": "a"},{"text": "b"},{"text": "c"}]},
+                {"backgroundColor": "grey","cells": [{"text": "a"},{"text": "b"},{"text": "c"}]},
+                {"backgroundColor": "grey","cells": [{"text": "a"},{"text": "b"},{"text": "c"}]},
+                {"backgroundColor": "grey","cells": [{"text": "a"},{"text": "b"},{"text": "c"}]},
+                {"backgroundColor": "grey","cells": [{"text": "a"},{"text": "b"},{"text": "c"}]},
+                {"backgroundColor": "grey","cells": [{"text": "a"},{"text": "b"},{"text": "c"}]},
+                {"backgroundColor": "grey","cells": [{"text": "a"},{"text": "b"},{"text": "c"}]},
+                {"backgroundColor": "grey","cells": [{"text": "a"},{"text": "b"},{"text": "c"}]},
+                {"backgroundColor": "grey","cells": [{"text": "a"},{"text": "b"},{"text": "c"}]},
+                {"backgroundColor": "grey","cells": [{"text": "a"},{"text": "b"},{"text": "c"}]},
+                {"backgroundColor": "grey","cells": [{"text": "a"},{"text": "b"},{"text": "c"}]},
+                {"backgroundColor": "grey","cells": [{"text": "a"},{"text": "b"},{"text": "c"}]},
+                {"backgroundColor": "grey","cells": [{"text": "a"},{"text": "b"},{"text": "c"}]},
+                {"backgroundColor": "grey","cells": [{"text": "a"},{"text": "b"},{"text": "c"}]},
+                {"backgroundColor": "grey","cells": [{"text": "a"},{"text": "b"},{"text": "c"}]},
+                {"backgroundColor": "grey","cells": [{"text": "a"},{"text": "b"},{"text": "c"}]},
+                {"backgroundColor": "grey","cells": [{"text": "a"},{"text": "b"},{"text": "c"}]},
+                {"backgroundColor": "grey","cells": [{"text": "a"},{"text": "b"},{"text": "c"}]},
+                {"backgroundColor": "grey","cells": [{"text": "a"},{"text": "b"},{"text": "c"}]},
+            ]
+        }
+    }
+
 }
 
 real_results_table = {
@@ -965,6 +1061,11 @@ datasources2 = {
                 "primaryText": "The Table",
                 "imageSource": "https://duy7y3nglgmh.cloudfront.net/thetable.png",
                 "primaryAction": [{"type": "SendEvent","arguments": ["table"]}]
+            },
+            {
+                "primaryText": "Advanced Analytics",
+                "imageSource": "https://duy7y3nglgmh.cloudfront.net/fremium.png",
+                "primaryAction": [{"type": "SendEvent","arguments": ["purchase"]}]
             },
             {
                 "primaryText": "Other League Tables",
