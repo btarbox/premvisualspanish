@@ -19,7 +19,7 @@ from statshandlers import results_handler, fixtures_handler, table_handler, rele
 from statshandlers import NAME_INDEX,GOAL_DIFF_INDEX, find_team_index,load_combined_stats, load_two_stats
 from shared import extra_cmd_prompts,  doc, noise, noise2, noise3, noise_max_millis, real_results_table 
 from shared import noise2_max_millis, noise3_max_millis, datasources2, datasourcessp, test_speach_data, noise_data, teamsdatasource, foo_table, results_table, championship_table
-from shared import other_leagues
+from shared import other_leagues,noises
 from linechartdata import linedata
 import boto3
 import json
@@ -27,7 +27,7 @@ from random import randrange
 from QuickChart import QuickChart
 from datetime import datetime
 from statshandlers import wrap_language, set_translation, is_spanish, day_of_week_trans,month_trans, load_champ_table, champ_table
-from statshandlers import emit_locale_metric
+from statshandlers import emit_locale_metric, return_random_noise
 import traceback
 import copy
 import time
@@ -130,7 +130,7 @@ class ButtonEventHandler(AbstractRequestHandler):
             return (handler_input.response_builder.speak(wrap_language(handler_input, _("Ok, we'll show you team {}")).format(direct_object)).add_directive(ExecuteCommandsDirective(token=TOKEN,commands=button_commands)).response)
 
         if first_arg == "purchase":
-            the_text = "A set of advanced analytic graphs a available, say, purchase advanced, to give them a try"
+            the_text = "A set of advanced analytic graphs are available including Vee Eh Are, Attendance, Corners, Possession, Long vs short goals, and Offside, say, purchase advanced, to give them a try"
             return handler_input.response_builder.speak(the_text).ask("press a button").response
 
         if first_arg == "goaldifference":
@@ -141,7 +141,12 @@ class ButtonEventHandler(AbstractRequestHandler):
             
         if first_arg == "goals_shots":
             return(goals_shots(handler_input))
-            
+
+        purchase_only = ["attendance", "possession", "in_out_box", "corners", "offside", "var", "rankchanges"]
+        if (first_arg in purchase_only) and (skill_has_products(handler_input) is None):
+            the_text = "that button requires a subscription, say, purchase advanced, to give the advanced analytic charts a try"
+            return handler_input.response_builder.speak(the_text).ask("press a button").response
+                
         if first_arg == "attendance":
             return(attendance(handler_input))
             
@@ -156,6 +161,7 @@ class ButtonEventHandler(AbstractRequestHandler):
             
         if first_arg == "offside":
             return(offside(handler_input))
+            
         if first_arg == "var":
             return(var(handler_input))
             
@@ -206,6 +212,9 @@ class ButtonEventHandler(AbstractRequestHandler):
             
         if first_arg == "results":
             return results_visual(handler_input)
+
+        if first_arg == "rankchanges":
+            return rankchanges(handler_input)
 
         if first_arg == "other_leagues":
             logger.info("bring up secondary page")
@@ -359,19 +368,29 @@ def results_visual(handler_input):
             logger.info("could not get pixel_height")
             logger.error(ex)
             traceback.print_exc()
-
-    return (
-        handler_input.response_builder
-            .speak(wrap_language(handler_input, _("Here are the results, scroll down and press Back to return")))
-            .set_should_end_session(False)          
-            .add_directive( 
+    rb = handler_input.response_builder
+    rb.speak(wrap_language(handler_input, _("Here are the results, scroll down and press Back to return"))).set_should_end_session(False)          
+    rb.add_directive( 
               APLRenderDocumentDirective(
-                token = "developer-provided-string",
                     document = doc,
                     datasources = real_results_table 
               )
-            ).response
-        )
+            )
+    add_noise_directive(rb)        
+    return rb.response        
+
+    # return (
+    #     handler_input.response_builder
+    #         .speak(wrap_language(handler_input, _("Here are the results, scroll down and press Back to return")))
+    #         .set_should_end_session(False)          
+    #         .add_directive( 
+    #           APLRenderDocumentDirective(
+    #             token = "developer-provided-string",
+    #                 document = doc,
+    #                 datasources = real_results_table 
+    #           )
+    #         ).response
+    #     )
         
 def fix_logo_name(name):
     logger.info(f"fix .{name}.")
@@ -461,21 +480,31 @@ def fixtures_visual(handler_input):
             logger.info("could not get pixel_height")
             logger.error(ex)
             traceback.print_exc()
-
-    return (
-        handler_input.response_builder
-            .speak(wrap_language(handler_input, _("Here are the fixtures, press Back to return")))
-            .set_should_end_session(False)          
-            .add_directive( 
+    rb = handler_input.response_builder
+    rb.speak(wrap_language(handler_input, _("Here are the fixtures, press Back to return"))).set_should_end_session(False)          
+    rb.add_directive( 
               APLRenderDocumentDirective(
-                token = "developer-provided-string",
                     document = doc,
                     datasources = results_table 
               )
-            ).response
-        )
+            )
+    add_noise_directive(rb)        
+    return rb.response        
 
- 
+    # return (
+    #     handler_input.response_builder
+    #         .speak(wrap_language(handler_input, _("Here are the fixtures, press Back to return")))
+    #         .set_should_end_session(False)          
+    #         .add_directive( 
+    #           APLRenderDocumentDirective(
+    #             token = "developer-provided-string",
+    #                 document = doc,
+    #                 datasources = results_table 
+    #           )
+    #         ).response
+    #     )
+
+''' converted to have background sound ''' 
 def laliga_visual(handler_input, key, text):
     bun_table = []
     _ = set_translation(handler_input)
@@ -531,21 +560,73 @@ def laliga_visual(handler_input, key, text):
         except Exception as ex:
             logger.info("could not get pixel_height")
             logger.error(ex)
-    return (
-        handler_input.response_builder
-            .speak(wrap_language(handler_input,_("Here is the table, press Back to return")))  
-            .set_should_end_session(False)          
-            .add_directive( 
+    rb = handler_input.response_builder
+    rb.speak(wrap_language(handler_input,_("Here is the table, press Back to return"))).set_should_end_session(False)
+    rb.add_directive( 
               APLRenderDocumentDirective(
                 token = "developer-provided-string",
                     document = doc,
                     datasources = bar 
               )
-            ).response
+            )
+    noise,start = return_random_noise()
+    rb.add_directive( 
+        APLARenderDocumentDirective(
+            token= "developer-provided-string",
+            document = _load_apl_document("justCrowdNoise.json"),
+            datasources = {"text": {"speak": ""},
+                "crowd": {
+                    "noise": noise,
+                    "start": str(start)
+                }
+            }              
         )
+      )
+            
+    return rb.response
+
+    # return (
+    #     handler_input.response_builder
+    #         .speak(wrap_language(handler_input,_("Here is the table, press Back to return")))  
+    #         .set_should_end_session(False)          
+    #         .add_directive( 
+    #           APLRenderDocumentDirective(
+    #             token = "developer-provided-string",
+    #                 document = doc,
+    #                 datasources = bar 
+    #           )
+    #         ).response
+    #     )
     
 
+# def return_random_noise():
+#     x = randrange(0,8)
+#     return noises[x], randrange(30 * 1000)
+    # if x == 0:
+    #     return noise, noise_max_millis
+    # if x == 1:
+    #     return noise2, noise2_max_millis
+    # return noise3, noise2_max_millis
 
+def add_noise_directive(rb):
+    try:
+        noise,start = return_random_noise()
+        rb.add_directive( 
+            APLARenderDocumentDirective(
+                token= "developer-provided-string",
+                document = _load_apl_document("justCrowdNoise.json"),
+                datasources = {"text": {"speak": ""},
+                    "crowd": {
+                        "noise": noise,
+                        "start": str(start)
+                    }
+                }              
+            )
+          )
+    except Exception as ex:
+        logger.info("hit exception in add_noise_directive")
+        logger.error(ex)        
+    
  
 def bundesliga_visual(handler_input):
     _ = set_translation(handler_input)
@@ -569,7 +650,7 @@ def bundesliga_visual(handler_input):
     
     for team in x:
         try:
-            #logger.info(f"about to do team {team_index}")
+            logger.info(f"about to do team {team_index}")
             if team_index < 4:
                 bar["dataTable"]["properties"]["rows"][team_index]["backgroundColor"] = "green"
             elif team_index < 6:
@@ -591,7 +672,7 @@ def bundesliga_visual(handler_input):
             bar["dataTable"]["properties"]["rows"][team_index]["cells"][8]["text"] = str(one_team[8])
             bar["dataTable"]["properties"]["rows"][team_index]["cells"][9]["text"] = str(one_team[2])
             team_index = team_index + 1
-            if team_index > 18:
+            if team_index >= 18:
                 break
         except Exception as ex:
             logger.info("hit exception")
@@ -605,18 +686,20 @@ def bundesliga_visual(handler_input):
         except Exception as ex:
             logger.info("could not get pixel_height")
             logger.error(ex)
-    return (
-        handler_input.response_builder
-            .speak(wrap_language(handler_input, _("Here is the table, press Back to return")))
-            .set_should_end_session(False)          
-            .add_directive( 
+    
+    logger.info("here")        
+    rb = handler_input.response_builder
+    rb.speak(wrap_language(handler_input, _("Here is the table, press Back to return"))).set_should_end_session(False)          
+    rb.add_directive( 
               APLRenderDocumentDirective(
                 token = "developer-provided-string",
                     document = doc,
                     datasources = bar 
               )
-            ).response
-        )
+            )
+    add_noise_directive(rb)        
+    return rb.response
+
 
    
 def championship_visual(handler_input):
@@ -667,19 +750,30 @@ def championship_visual(handler_input):
             logger.error(ex)
     else:
         logger.info("running on regular device")
-        
-    return (
-        handler_input.response_builder
-            .speak(wrap_language(handler_input, _("Here is the table, press Back to return")))
-            .set_should_end_session(False)          
-            .add_directive( 
+
+    rb = handler_input.response_builder
+    rb.speak(wrap_language(handler_input, _("Here is the table, press Back to return"))).set_should_end_session(False)          
+    rb.add_directive( 
               APLRenderDocumentDirective(
                 token = "developer-provided-string",
                     document = doc,
                     datasources = championship_table 
               )
-            ).response
-        )
+            )
+    add_noise_directive(rb)        
+    return rb.response        
+    # return (
+    #     handler_input.response_builder
+    #         .speak(wrap_language(handler_input, _("Here is the table, press Back to return")))
+    #         .set_should_end_session(False)          
+    #         .add_directive( 
+    #           APLRenderDocumentDirective(
+    #             token = "developer-provided-string",
+    #                 document = doc,
+    #                 datasources = championship_table 
+    #           )
+    #         ).response
+    #     )
         
     
 def load_main_table_data(handler_input):
@@ -728,18 +822,30 @@ def portrait_table_results(handler_input):
         combined_ds["dataTable2"] = results_table["dataTable"]
         
         doc = _load_apl_document("portrait_table.json")
-        return (
-            handler_input.response_builder
-                .speak("Here is the table, press Back to return")
-                .set_should_end_session(False)          
-                .add_directive( 
+        rb = handler_input.response_builder
+        rb.speak(wrap_language(handler_input, _("Here is the table, press Back to return"))).set_should_end_session(False)          
+        rb.add_directive( 
                   APLRenderDocumentDirective(
                     token = "developer-provided-string",
-                    document = doc,
-                    datasources = combined_ds 
+                        document = doc,
+                        datasources = combined_ds 
                   )
-                ).response
-            )
+                )
+        add_noise_directive(rb)        
+        return rb.response        
+
+        # return (
+        #     handler_input.response_builder
+        #         .speak("Here is the table, press Back to return")
+        #         .set_should_end_session(False)          
+        #         .add_directive( 
+        #           APLRenderDocumentDirective(
+        #             token = "developer-provided-string",
+        #             document = doc,
+        #             datasources = combined_ds 
+        #           )
+        #         ).response
+        #     )
     except Exception as ex:
         logger.info("hit exception")
         logger.error(ex)        
@@ -765,18 +871,31 @@ def table(handler_input):
                 logger.info("could not get pixel_height")
                 logger.error(ex)
             #logger.info("TABLE.JSON " + str(doc))
-        return (
-            handler_input.response_builder
-                .speak("Here is the table, press Back to return")
-                .set_should_end_session(False)          
-                .add_directive( 
+        rb = handler_input.response_builder
+        rb.speak(wrap_language(handler_input, _("Here is the table, press Back to return"))).set_should_end_session(False)          
+        rb.add_directive( 
                   APLRenderDocumentDirective(
                     token = "developer-provided-string",
-                    document = doc,
-                    datasources = foo_table 
+                        document = doc,
+                        datasources = foo_table 
                   )
-                ).response
-            )
+                )
+        add_noise_directive(rb)        
+        return rb.response        
+
+
+        # return (
+        #     handler_input.response_builder
+        #         .speak("Here is the table, press Back to return")
+        #         .set_should_end_session(False)          
+        #         .add_directive( 
+        #           APLRenderDocumentDirective(
+        #             token = "developer-provided-string",
+        #             document = doc,
+        #             datasources = foo_table 
+        #           )
+        #         ).response
+        #     )
     except Exception as ex:
         logger.info("hit exception")
         logger.error(ex)        
@@ -805,24 +924,164 @@ def goaldifference(handler_input):
     ds = get_goal_difference_url(handler_input)
 
     logger.info(ds)
-    return (
-        handler_input.response_builder
-            .speak(wrap_language(handler_input, _("Here are the goal differences, press Back to return")))
-            .set_should_end_session(False)          
-            .add_directive( 
+    rb = handler_input.response_builder
+    rb.speak(wrap_language(handler_input, _("Here are the goal differences, press Back to return"))).set_should_end_session(False)          
+    rb.add_directive( 
               APLRenderDocumentDirective(
-                token= TOKEN,
                 document = {
                     "type" : "Link",
                     "token" : TOKEN,
                     "src"  : "doc://alexa/apl/documents/GoalDifference"
                 },
                 datasources = {"source": {"url": ds, "back": _("Back")}}
-                    
               )
-            ).response
-        )
+            )
+    add_noise_directive(rb)        
+    return rb.response        
 
+    # return (
+    #     handler_input.response_builder
+    #         .speak(wrap_language(handler_input, _("Here are the goal differences, press Back to return")))
+    #         .set_should_end_session(False)          
+    #         .add_directive( 
+    #           APLRenderDocumentDirective(
+    #             token= TOKEN,
+    #             document = {
+    #                 "type" : "Link",
+    #                 "token" : TOKEN,
+    #                 "src"  : "doc://alexa/apl/documents/GoalDifference"
+    #             },
+    #             datasources = {"source": {"url": ds, "back": _("Back")}}
+                    
+    #           )
+    #         ).response
+    #     )
+
+team_names = [
+    "Arsenal" ,          
+    "Aston Villa"   ,    
+    "Burnley"      ,     
+    "Brentford"   ,      
+    "Brighton and Hove Albion",
+    "Chelsea"   ,        
+    "Crystal Palace"  ,  
+    "Everton"      ,     
+    "Leeds United"  ,    
+    "Leicester City",    
+    "Liverpool"   ,      
+    "Manchester United" ,
+    "Manchester City"  , 
+    "Newcastle United" , 
+    "Norwich City"   ,   
+    "Southampton" ,      
+    "Tottenham Hotspur" ,
+    "Watford"          , 
+    "West Ham United"  , 
+    "Wolverhampton Wanderers"
+]
+''' creates a dictionary of number of rank changes by team''' 
+def table_rank_changes():
+    s3 = boto3.client("s3")
+    resp = s3.get_object(Bucket=bucket, Key="line_data")
+    body_str = string_data = resp['Body'].read().decode("utf-8")
+    n = body_str.split("\n")
+    n.pop()
+    lines_in_file = len(n)
+    week_num = 0
+    weeks = []
+    for x in range(0,38):
+        weeks.append([])
+    
+    for line in n:
+        week_num = 0
+        logger.info(f"line is {line}")
+        this_line = line.split(',')
+        team = this_line[0]
+        team_points = this_line[1:]
+        for points in team_points:
+            this_tuple = (team,points)
+            weeks[week_num].append(this_tuple)
+            logger.info(f"week {week_num} tuple: {this_tuple}")
+            week_num += 1
+
+    logger.info("processed data part one")
+    logger.info(sorted(weeks[0],  key=lambda team: int(team[1])))
+    logger.info(sorted(weeks[1],  key=lambda team: int(team[1])))
+    logger.info(sorted(weeks[2],  key=lambda team: int(team[1])))
+    logger.info(sorted(weeks[3],  key=lambda team: int(team[1])))
+    team_rank_changes = {}
+    for x in range(2,21):
+        week1 = sorted(weeks[x],  key=lambda team: int(team[1]))
+        week2 = sorted(weeks[x+1],key=lambda team: int(team[1]))
+        num_deltas = 0
+        team_rank_change_this_week = {}
+        logger.info(f"{week1} {week2}")
+        for w1,w2 in zip(week1,week2):
+            if (w1[0] != w2[0]) and (w1[1] != w2[1]):
+                num_deltas += 1
+                if team_rank_change_this_week.get(w1[0], None) is None:
+                    old_team_count = team_rank_changes.get(w1[0], 0)
+                    team_rank_changes[w1[0]] = (old_team_count + 1)
+                    team_rank_change_this_week[w1[0]] = 1
+                    logger.info(f"{w1[0]} changed rank with {w2[0]}")
+                
+                if team_rank_change_this_week.get(w2[0], None) is None:
+                    old_team_count = team_rank_changes.get(w2[0], 0)
+                    team_rank_changes[w2[0]] = (old_team_count + 1)
+                    team_rank_change_this_week[w2[0]] = 1
+                    logger.info(f"{w2[0]} changed rank with {w1[0]}")
+        logger.info(f"week {x} had {num_deltas} rank changes")
+    return team_rank_changes
+    
+
+def get_position_change_url(handler_input):
+    _ = set_translation(handler_input)
+    qc = QuickChart()
+    qc.width = 500
+    qc.height = 300
+    labels = []
+    datasets = []
+    dict = {
+        "type": "bar", 
+        "data": {"labels": [], 
+                "datasets": [{'data': []}]
+        }    
+    }
+    team_rank_changes = table_rank_changes()
+    dict['data']['datasets'][0]['label'] = _("League Position Changes")
+    for team in team_names:
+        logger.info(team_rank_changes[team])
+        dict['data']['labels'].append(short_names[team])
+        dict['data']['datasets'][0]['data'].append(team_rank_changes[team])
+    
+    qc.config = str(dict).replace('12345', "function(context) {var index = context.dataIndex; var value = context.dataset.data[index];return value < 0 ? 'red' : 'blue';}")
+
+    ret_url = qc.get_short_url()
+    logger.info(f"graphurl: {ret_url}")
+    return(ret_url)
+
+    
+def rankchanges(handler_input):
+    _ = set_translation(handler_input)
+    ds = get_position_change_url(handler_input)
+
+    logger.info(ds)
+    rb = handler_input.response_builder
+    rb.speak(wrap_language(handler_input, _("Here are the table rank changes, press Back to return"))).set_should_end_session(False)          
+    rb.add_directive( 
+              APLRenderDocumentDirective(
+                document = {
+                    "type" : "Link",
+                    "token" : TOKEN,
+                    "src"  : "doc://alexa/apl/documents/GoalDifference"
+                },
+                datasources = {"source": {"url": ds, "back": _("Back")}}
+              )
+            )
+    add_noise_directive(rb)        
+    return rb.response        
+
+    
 def get_goal_difference_url(handler_input):
     _ = set_translation(handler_input)
     qc = QuickChart()
@@ -859,6 +1118,7 @@ def get_goal_difference_url(handler_input):
     #logger.info(qc.config)
 
     ret_url = qc.get_short_url()
+    logger.info(f"graphurl: {ret_url}")
     return(ret_url)
     
 
@@ -867,23 +1127,38 @@ def yellow_red(handler_input):
     ds = get_save_percent_url(handler_input,_("Yellow Cards"), _("Red Cards"), _("Cards by Referees"), "yellow_red")
 
     logger.info(ds)
-    return (
-        handler_input.response_builder
-            .speak(wrap_language(handler_input, _("Here are red and yellow cards by referee, press Back to return")))
-            .set_should_end_session(False)          
-            .add_directive( 
+    rb = handler_input.response_builder
+    rb.speak(wrap_language(handler_input, _("Here are red and yellow cards by referee, press Back to return"))).set_should_end_session(False)          
+    rb.add_directive( 
               APLRenderDocumentDirective(
-                token= TOKEN,
                 document = {
                     "type" : "Link",
                     "token" : TOKEN,
                     "src"  : "doc://alexa/apl/documents/GoalDifference"
                 },
                 datasources = {"source": {"url": ds, "back": _("Back")}}
-                    
               )
-            ).response
-        )
+            )
+    add_noise_directive(rb)        
+    return rb.response        
+
+    # return (
+    #     handler_input.response_builder
+    #         .speak(wrap_language(handler_input, _("Here are red and yellow cards by referee, press Back to return")))
+    #         .set_should_end_session(False)          
+    #         .add_directive( 
+    #           APLRenderDocumentDirective(
+    #             token= TOKEN,
+    #             document = {
+    #                 "type" : "Link",
+    #                 "token" : TOKEN,
+    #                 "src"  : "doc://alexa/apl/documents/GoalDifference"
+    #             },
+    #             datasources = {"source": {"url": ds, "back": _("Back")}}
+                    
+    #           )
+    #         ).response
+    #     )
 
 
 def attendance(handler_input):
@@ -891,162 +1166,264 @@ def attendance(handler_input):
     ds = get_two_stacked_url(handler_input,_("Actual"), _("Capacity"), _("Attendance"), "attendance")
 
     logger.info(ds)
-    return (
-        handler_input.response_builder
-            .speak(wrap_language(handler_input, _("Here are team attendances, press Back to return")))
-            .set_should_end_session(False)          
-            .add_directive( 
+    rb = handler_input.response_builder
+    rb.speak(wrap_language(handler_input, _("Here are team attendances, press Back to return"))).set_should_end_session(False)          
+    rb.add_directive( 
               APLRenderDocumentDirective(
-                token= TOKEN,
                 document = {
                     "type" : "Link",
                     "token" : TOKEN,
                     "src"  : "doc://alexa/apl/documents/GoalDifference"
                 },
                 datasources = {"source": {"url": ds, "back": _("Back")}}
-                    
               )
-            ).response
-        )
+            )
+    add_noise_directive(rb)        
+    return rb.response        
+
+
+    # return (
+    #     handler_input.response_builder
+    #         .speak(wrap_language(handler_input, _("Here are team attendances, press Back to return")))
+    #         .set_should_end_session(False)          
+    #         .add_directive( 
+    #           APLRenderDocumentDirective(
+    #             token= TOKEN,
+    #             document = {
+    #                 "type" : "Link",
+    #                 "token" : TOKEN,
+    #                 "src"  : "doc://alexa/apl/documents/GoalDifference"
+    #             },
+    #             datasources = {"source": {"url": ds, "back": _("Back")}}
+                    
+    #           )
+    #         ).response
+    #     )
 
 def in_out_box(handler_input):
     _ = set_translation(handler_input)
     ds = get_two_stacked_url(handler_input,_("Inside Box"), _("Outside Box"), _("Goals"), "in_out_box")
 
     logger.info(ds)
-    return (
-        handler_input.response_builder
-            .speak(wrap_language(handler_input, _("Here are team goals, press Back to return")))
-            .set_should_end_session(False)          
-            .add_directive( 
+    rb = handler_input.response_builder
+    rb.speak(wrap_language(handler_input, _("Here are team goals, press Back to return"))).set_should_end_session(False)          
+    rb.add_directive( 
               APLRenderDocumentDirective(
-                token= TOKEN,
                 document = {
                     "type" : "Link",
                     "token" : TOKEN,
                     "src"  : "doc://alexa/apl/documents/GoalDifference"
                 },
                 datasources = {"source": {"url": ds, "back": _("Back")}}
-                    
               )
-            ).response
-        )
+            )
+    add_noise_directive(rb)        
+    return rb.response        
+    # return (
+    #     handler_input.response_builder
+    #         .speak(wrap_language(handler_input, _("Here are team goals, press Back to return")))
+    #         .set_should_end_session(False)          
+    #         .add_directive( 
+    #           APLRenderDocumentDirective(
+    #             token= TOKEN,
+    #             document = {
+    #                 "type" : "Link",
+    #                 "token" : TOKEN,
+    #                 "src"  : "doc://alexa/apl/documents/GoalDifference"
+    #             },
+    #             datasources = {"source": {"url": ds, "back": _("Back")}}
+                    
+    #           )
+    #         ).response
+    #     )
         
 def var(handler_input):
     _ = set_translation(handler_input)
     ds = get_two_stacked_url(handler_input,_("For"), _("Against"), _("Decisions By Percent For"), "var")
 
     logger.info(ds)
-    return (
-        handler_input.response_builder
-            .speak(wrap_language(handler_input, _("Here are team VAR decisions, press Back to return")))
-            .set_should_end_session(False)          
-            .add_directive( 
+    rb = handler_input.response_builder
+    rb.speak(wrap_language(handler_input, _("Here are team VAR decisions, press Back to return"))).set_should_end_session(False)          
+    rb.add_directive( 
               APLRenderDocumentDirective(
-                token= TOKEN,
                 document = {
                     "type" : "Link",
                     "token" : TOKEN,
                     "src"  : "doc://alexa/apl/documents/GoalDifference"
                 },
                 datasources = {"source": {"url": ds, "back": _("Back")}}
-                    
               )
-            ).response
-        )
+            )
+    add_noise_directive(rb)        
+    return rb.response        
+    # return (
+    #     handler_input.response_builder
+    #         .speak(wrap_language(handler_input, _("Here are team VAR decisions, press Back to return")))
+    #         .set_should_end_session(False)          
+    #         .add_directive( 
+    #           APLRenderDocumentDirective(
+    #             token= TOKEN,
+    #             document = {
+    #                 "type" : "Link",
+    #                 "token" : TOKEN,
+    #                 "src"  : "doc://alexa/apl/documents/GoalDifference"
+    #             },
+    #             datasources = {"source": {"url": ds, "back": _("Back")}}
+                    
+    #           )
+    #         ).response
+    #     )
 
 def possession(handler_input):
     _ = set_translation(handler_input)
     ds = get_one_stat_url(handler_input,_("Actual"), _("Percent Possession"), "possession")
 
     logger.info(ds)
-    return (
-        handler_input.response_builder
-            .speak(wrap_language(handler_input, _("Here are team percent possessions, press Back to return")))
-            .set_should_end_session(False)          
-            .add_directive( 
+    rb = handler_input.response_builder
+    rb.speak(wrap_language(handler_input, _("Here are team percent possessions, press Back to return"))).set_should_end_session(False)          
+    rb.add_directive( 
               APLRenderDocumentDirective(
-                token= TOKEN,
                 document = {
                     "type" : "Link",
                     "token" : TOKEN,
                     "src"  : "doc://alexa/apl/documents/GoalDifference"
                 },
                 datasources = {"source": {"url": ds, "back": _("Back")}}
-                    
               )
-            ).response
-        )
+            )
+    add_noise_directive(rb)        
+    return rb.response        
+    # return (
+    #     handler_input.response_builder
+    #         .speak(wrap_language(handler_input, _("Here are team percent possessions, press Back to return")))
+    #         .set_should_end_session(False)          
+    #         .add_directive( 
+    #           APLRenderDocumentDirective(
+    #             token= TOKEN,
+    #             document = {
+    #                 "type" : "Link",
+    #                 "token" : TOKEN,
+    #                 "src"  : "doc://alexa/apl/documents/GoalDifference"
+    #             },
+    #             datasources = {"source": {"url": ds, "back": _("Back")}}
+                    
+    #           )
+    #         ).response
+    #     )
         
 def corners(handler_input):
     _ = set_translation(handler_input)
     ds = get_one_stat_url(handler_input,_("Corners"), _("Corners"), "corners")
 
     logger.info(ds)
-    return (
-        handler_input.response_builder
-            .speak(wrap_language(handler_input, _("Here are team corners, press Back to return")))
-            .set_should_end_session(False)          
-            .add_directive( 
+    rb = handler_input.response_builder
+    rb.speak(wrap_language(handler_input, _("Here are team corners, press Back to return"))).set_should_end_session(False)          
+    rb.add_directive( 
               APLRenderDocumentDirective(
-                token= TOKEN,
                 document = {
                     "type" : "Link",
                     "token" : TOKEN,
                     "src"  : "doc://alexa/apl/documents/GoalDifference"
                 },
                 datasources = {"source": {"url": ds, "back": _("Back")}}
-                    
               )
-            ).response
-        )
+            )
+    add_noise_directive(rb)        
+    return rb.response        
+
+    # return (
+    #     handler_input.response_builder
+    #         .speak(wrap_language(handler_input, _("Here are team corners, press Back to return")))
+    #         .set_should_end_session(False)          
+    #         .add_directive( 
+    #           APLRenderDocumentDirective(
+    #             token= TOKEN,
+    #             document = {
+    #                 "type" : "Link",
+    #                 "token" : TOKEN,
+    #                 "src"  : "doc://alexa/apl/documents/GoalDifference"
+    #             },
+    #             datasources = {"source": {"url": ds, "back": _("Back")}}
+                    
+    #           )
+    #         ).response
+    #     )
         
 def offside(handler_input):
     _ = set_translation(handler_input)
     ds = get_one_stat_url(handler_input,_("Offside"), _("Offside"), "offside")
 
     logger.info(ds)
-    return (
-        handler_input.response_builder
-            .speak(wrap_language(handler_input, _("Here are team offside, press Back to return")))
-            .set_should_end_session(False)          
-            .add_directive( 
+    rb = handler_input.response_builder
+    rb.speak(wrap_language(handler_input, _("Here are team offside, press Back to return"))).set_should_end_session(False)          
+    rb.add_directive( 
               APLRenderDocumentDirective(
-                token= TOKEN,
                 document = {
                     "type" : "Link",
                     "token" : TOKEN,
                     "src"  : "doc://alexa/apl/documents/GoalDifference"
                 },
                 datasources = {"source": {"url": ds, "back": _("Back")}}
-                    
               )
-            ).response
-        )
+            )
+    add_noise_directive(rb)        
+    return rb.response        
+
+    # return (
+    #     handler_input.response_builder
+    #         .speak(wrap_language(handler_input, _("Here are team offside, press Back to return")))
+    #         .set_should_end_session(False)          
+    #         .add_directive( 
+    #           APLRenderDocumentDirective(
+    #             token= TOKEN,
+    #             document = {
+    #                 "type" : "Link",
+    #                 "token" : TOKEN,
+    #                 "src"  : "doc://alexa/apl/documents/GoalDifference"
+    #             },
+    #             datasources = {"source": {"url": ds, "back": _("Back")}}
+                    
+    #           )
+    #         ).response
+    #     )
     
 def savepercent(handler_input):
     _ = set_translation(handler_input)
     ds = get_save_percent_url(handler_input,_("Saves"), _("goals allowed"), _("Keeper Saves vs. Goals"), "savepercent")
 
     #logger.info(ds)
-    return (
-        handler_input.response_builder
-            .speak(wrap_language(handler_input, _("Here are Keeper saves versus goals, press Back to return")))
-            .set_should_end_session(False)          
-            .add_directive( 
+    rb = handler_input.response_builder
+    rb.speak(wrap_language(handler_input, _("Here are Keeper saves versus goals, press Back to return"))).set_should_end_session(False)          
+    rb.add_directive( 
               APLRenderDocumentDirective(
-                token= TOKEN,
                 document = {
                     "type" : "Link",
                     "token" : TOKEN,
                     "src"  : "doc://alexa/apl/documents/GoalDifference"
                 },
                 datasources = {"source": {"url": ds, "back": _("Back")}}
-                    
               )
-            ).response
-        )
+            )
+    add_noise_directive(rb)        
+    return rb.response        
 
+    # return (
+    #     handler_input.response_builder
+    #         .speak(wrap_language(handler_input, _("Here are Keeper saves versus goals, press Back to return")))
+    #         .set_should_end_session(False)          
+    #         .add_directive( 
+    #           APLRenderDocumentDirective(
+    #             token= TOKEN,
+    #             document = {
+    #                 "type" : "Link",
+    #                 "token" : TOKEN,
+    #                 "src"  : "doc://alexa/apl/documents/GoalDifference"
+    #             },
+    #             datasources = {"source": {"url": ds, "back": _("Back")}}
+    #           )
+    #         ).response
+    #     )
+# 
 
 def get_save_percent_url(handler_input, label1, label2, title, filename):
     _ = set_translation(handler_input)
@@ -1098,7 +1475,7 @@ def get_save_percent_url(handler_input, label1, label2, title, filename):
     qc.config = str(dict)
 
     ret_url = qc.get_short_url()
-    #logger.info(f"the long url is {qc.get_url()}")
+    logger.info(f"graphurl: {ret_url}")
     return(ret_url)
 
 
@@ -1147,7 +1524,9 @@ def get_two_stacked_url(handler_input, label1, label2, title, filename):
     qc.config = str(dict)
 
     ret_url = qc.get_short_url()
+    logger.info(f"graphurl: {ret_url}")
     return(ret_url)
+
 
 def get_one_stat_url(handler_input, label1,  title, filename):
     _ = set_translation(handler_input)
@@ -1190,6 +1569,7 @@ def get_one_stat_url(handler_input, label1,  title, filename):
     logger.info("at get_one_stat_url4")
 
     ret_url = qc.get_short_url()
+    logger.info(f"graphurl: {ret_url}")
     return(ret_url)
 
 
@@ -1199,23 +1579,37 @@ def goals_shots(handler_input):
     ds = get_goals_shots_url(handler_input)
 
     #logger.info(ds)
-    return (
-        handler_input.response_builder
-            .speak(wrap_language(handler_input, _("Here are goals vs shots, press Back to return")))
-            .set_should_end_session(False)          
-            .add_directive( 
+    rb = handler_input.response_builder
+    rb.speak(wrap_language(handler_input, _("Here are goals vs shots, press Back to return"))).set_should_end_session(False)          
+    rb.add_directive( 
               APLRenderDocumentDirective(
-                token= TOKEN,
                 document = {
                     "type" : "Link",
                     "token" : TOKEN,
                     "src"  : "doc://alexa/apl/documents/GoalDifference"
                 },
                 datasources = {"source": {"url": ds, "back": _("Back")}}
-                    
               )
-            ).response
-        )
+            )
+    add_noise_directive(rb)        
+    return rb.response        
+    # return (
+    #     handler_input.response_builder
+    #         .speak(wrap_language(handler_input, _("Here are goals vs shots, press Back to return")))
+    #         .set_should_end_session(False)          
+    #         .add_directive( 
+    #           APLRenderDocumentDirective(
+    #             token= TOKEN,
+    #             document = {
+    #                 "type" : "Link",
+    #                 "token" : TOKEN,
+    #                 "src"  : "doc://alexa/apl/documents/GoalDifference"
+    #             },
+    #             datasources = {"source": {"url": ds, "back": _("Back")}}
+                    
+    #           )
+    #         ).response
+    #     )
     
     
 ''' goal difference '''
@@ -1270,7 +1664,7 @@ def get_goals_shots_url(handler_input):
     qc.config = str(dict)
 
     ret_url = qc.get_short_url()
-    #logger.info(f"the long url is {qc.get_url()}")
+    logger.info(f"graphurl: {ret_url}")
     return(ret_url)
 
 
@@ -1353,7 +1747,7 @@ def get_line_chart_url(session_attr, handler_input):
             dict['data']['datasets'].append(team_dict)
     qc.config = dict
     ret_url = qc.get_short_url()
-    #logger.info(qc.config)
+    logger.info(f"graphurl: {ret_url}")
     return(ret_url)
 
 team_dash = {

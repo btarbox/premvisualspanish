@@ -14,15 +14,30 @@ logger.setLevel(logging.INFO)
  
 ''' Adjust the main grid of buttons based on any purchase '''
 def ds2_advanced_or_not(handler_input):
-    my_products = skill_has_products(handler_input)
-    if my_products is not None:
-        paid = copy.deepcopy(datasources2)
-        paid["gridListData"]["listItems"].pop(1)
-        return paid
-    unpaid = copy.deepcopy(datasources2)
-    for i in range(7):
-        unpaid["gridListData"]["listItems"].pop(7)
-    return unpaid    
+    english_but_no_isp = ["en-AU", "en-IN"]
+    if handler_input.request_envelope.request.locale in english_but_no_isp:
+        no_isp = copy.deepcopy(datasources2)
+        no_isp["gridListData"]["listItems"].pop(1)
+        return no_isp
+
+    try:
+        my_products = skill_has_products(handler_input)
+        if my_products is not None:
+            logger.info("has purchase")
+            paid = copy.deepcopy(datasources2)
+            paid["gridListData"]["listItems"].pop(1)
+            return paid
+        else:
+            logger.info("no purchase so go grey")
+            unpaid = copy.deepcopy(datasources2)
+            for i in range(7,14):
+                unpaid["gridListData"]["listItems"][i]["imageSource"] = unpaid["gridListData"]["listItems"][i]["imageSource"].replace(".png", "_grey.png")
+                logger.info(unpaid["gridListData"]["listItems"][i]["imageSource"])
+            return unpaid    
+    except Exception as ex:
+        logger.error(ex)
+        traceback.print_exc()
+        return datasources2
         
 
 
@@ -147,9 +162,14 @@ def buy_response(handler_input):
         session_attr = handler_input.attributes_manager.session_attributes
         session_attr["screen_displayed"] = False
         handler_input.attributes_manager.session_attributes = session_attr
-
-        in_skill_response = in_skill_product_response(handler_input)
-        product_id = handler_input.request_envelope.request.payload.get("productId")
+        try:
+            in_skill_response = in_skill_product_response(handler_input)
+            product_id = handler_input.request_envelope.request.payload.get("productId")
+        except:
+            logger.error(ex)        
+            traceback.print_exc()
+            return output_right_directive(handler_input, "In Skill Purchasing is not supported in your locale, please try another request", None, noise3, noise3_max_millis)                    
+            
         speech = "Success"
 
         if in_skill_response:
@@ -161,10 +181,10 @@ def buy_response(handler_input):
                     logger.info("ISP: successful purchase")
                     speech = "You now have access to charts about Vee Eh Are, Attendance, Corners, Possession, Long vs short goals, and Offsides, scroll down to see the new options"
                 elif purchase_result in (PurchaseResult.DECLINED.value,PurchaseResult.ERROR.value,PurchaseResult.NOT_ENTITLED.value):
-                    speech = ("Purchase declined {}".format(product[0].name))
+                    speech = ("Purchase declined for {} What can we tell you about Premier League?".format(product[0].name))
                 elif purchase_result == PurchaseResult.ALREADY_PURCHASED.value:
                     logger.info("ISP: at Already purchased product")
-                    speech = " You have already purchased the product, thank you."
+                    speech = " You have already purchased the product, thank you. What can we tell you about Premier League?"
                 else:
                     # Invalid purchase result value
                     logger.info("ISP: Purchase result: {}".format(purchase_result))
@@ -229,10 +249,13 @@ def cancel_response(handler_input):
                 purchasable = product[0].purchasable
                 logger.info(f"ISP: purchasable {purchasable} purchase_result {purchase_result}")
                 if purchase_result == PurchaseResult.ACCEPTED.value:
-                    speech = ("You have successfully cancelled your subscription. ")
+                    speech = ("You have successfully cancelled your subscription. What can we tell you about Premier League?")
                     logger.info(f"ISP: successful cancel")
                 if purchase_result == PurchaseResult.NOT_ENTITLED.value:
-                    speech = "No subscription to cancel"
+                    speech = "No subscription to cancel. What can we tell you about Premier League?"
+                    logger.info("no subscription to cancel")
+                if purchase_result == PurchaseResult.DECLINED.value:
+                    speech = "What can we tell you about Premier League?"
                     logger.info("no subscription to cancel")
             else:
                 logger.log("ISP: Connections.Response indicated failure. Error: {}".format(handler_input.request_envelope.request.status.message))

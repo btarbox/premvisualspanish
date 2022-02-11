@@ -6,7 +6,12 @@ extra_cmd_prompts = {}
 noise  = "https://duy7y3nglgmh.cloudfront.net/FootballCrowdSound.mp3"
 noise2 = "https://duy7y3nglgmh.cloudfront.net/SoccerStadiumSoundEffect.mp3"
 noise3 = "https://duy7y3nglgmh.cloudfront.net/SportsStadiumCrowdCheering.mp3"
-noise_max_millis = 4 * 60 * 1000
+noise4 = "https://duy7y3nglgmh.cloudfront.net/116351765-soccer-crowd-huge-stadium-chee.mp3"
+noise5 = "https://duy7y3nglgmh.cloudfront.net/027693942-soccer-stadium-crowd-chant-and.mp3"
+noise6 = "https://duy7y3nglgmh.cloudfront.net/032526273-soccer-stadium-crowd-chant-and.mp3"
+noise7 = "https://duy7y3nglgmh.cloudfront.net/043966652-football-stadium-ambience-socc.mp3"
+noises = [noise,noise2,noise3,noise4,noise5,noise6,noise7]
+noise_max_millis  = 4 * 60 * 1000
 noise2_max_millis = 40 * 1000
 noise3_max_millis = 40 * 1000
 doc = "doc://alexa/apla/documents/unchanged_template_from_tools"
@@ -1093,39 +1098,45 @@ datasources2 = {
                 "primaryAction": [{"type": "SendEvent","arguments": ["line"]}]
             },
             {
-                "primaryText": "Attendance By Team",
+                "primaryText": "$ Attendance By Team",
                 "imageSource": "https://duy7y3nglgmh.cloudfront.net/attendance.png",
                 "primaryAction": [{"type": "SendEvent","arguments": ["attendance"]}]
             },
             {
-                "primaryText": "Possession By Team",
+                "primaryText": "$ Possession By Team",
                 "imageSource": "https://duy7y3nglgmh.cloudfront.net/possession3.png",
-                "imageScale": "best-fill",
+                "imageScpurchase advanced analyticsale": "best-fill",
                 "primaryAction": [{"type": "SendEvent","arguments": ["possession"]}]
             },
             {
-                "primaryText": "Goals In/Out Of Box",
+                "primaryText": "$ Goals In/Out Of Box",
                 "imageSource": "https://duy7y3nglgmh.cloudfront.net/long_shot.png",
                 "imageScale": "best-fill",
                 "primaryAction": [{"type": "SendEvent","arguments": ["in_out_box"]}]
             },
             {
-                "primaryText": "Corners By Team",
+                "primaryText": "$ Corners By Team",
                 "imageSource": "https://duy7y3nglgmh.cloudfront.net/corners.png",
                 "imageScale": "best-fill",
                 "primaryAction": [{"type": "SendEvent","arguments": ["corners"]}]
             },
             {
-                "primaryText": "Offside",
+                "primaryText": "$ Offside",
                 "imageSource": "https://duy7y3nglgmh.cloudfront.net/offside2.png",
                 "imageScale": "best-fit",
                 "primaryAction": [{"type": "SendEvent","arguments": ["offside"]}]
             },
             {
-                "primaryText": "VAR Decisions",
+                "primaryText": "$ VAR Decisions",
                 "imageSource": "https://duy7y3nglgmh.cloudfront.net/var.png",
                 "imageScale": "best-fit",
                 "primaryAction": [{"type": "SendEvent","arguments": ["var"]}]
+            },
+            {
+                "primaryText": "$ Table Rank Changes",
+                "imageSource": "https://duy7y3nglgmh.cloudfront.net/rankchanges.png",
+                "imageScale": "best-fit",
+                "primaryAction": [{"type": "SendEvent","arguments": ["rankchanges"]}]
             },
             {
                 "primaryText": "Relegation",

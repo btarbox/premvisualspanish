@@ -20,7 +20,7 @@ import re
 import boto3
 import json
 import requests
-from shared import extra_cmd_prompts, doc, noise, noise2, noise3, noise_max_millis, results_table 
+from shared import extra_cmd_prompts, doc, noise, noise2, noise3, noise_max_millis, noises, results_table 
 from shared import noise2_max_millis, noise3_max_millis, datasources2, datasourcessp, test_speach_data, noise_data, teamsdatasource
 from datetime import datetime
 import spanishnumber
@@ -89,6 +89,71 @@ say_place
 reload_main_table_as_needed
 load_main_table
 '''
+
+def output_right_directive(handler_input, the_text, image_url, noise, noise_max):
+    try:
+        _ = set_translation(handler_input)
+        logger.info("at output_right_directive")
+        set_session_start_time(handler_input)
+            
+        emit_locale_metric(handler_input)
+        session_attr = handler_input.attributes_manager.session_attributes
+        already_displayed_screen = session_attr.get("screen_displayed", False)
+        #noise_start = str(randrange(0, noise_max))
+        noise,noise_start = return_random_noise()
+        the_text = wrap_language(handler_input, the_text)
+        
+        if get_supported_interfaces(handler_input).alexa_presentation_apl is not None and not already_displayed_screen:
+            session_attr["radioButtonText"] = "Form"
+            handler_input.attributes_manager.session_attributes = session_attr
+            this_profile = str(get_viewport_profile(handler_input.request_envelope))
+            item_heights = {"ViewportProfile.HUB_LANDSCAPE_SMALL": "75%", "ViewportProfile.HUB_LANDSCAPE_MEDIUM": "65%", "ViewportProfile.HUB_LANDSCAPE_LARGE": "55%"}
+            this_height = item_heights.get(this_profile, "")
+            datasources2["gridListData"]["listItemHeight"] = this_height
+            # if is_spanish(handler_input):
+            #     datasources2["gridListData"]["title"] = "Puedes preguntar sobre"
+    
+            session_attr["screen_displayed"] = True
+            handler_input.attributes_manager.session_attributes = session_attr
+    
+            logger.info(f"output_right_directive visual {the_text}")
+            return (handler_input.response_builder.speak(the_text).set_should_end_session(False)          
+                    .add_directive( APLRenderDocumentDirective(
+                        token= "TOKEN",
+                        document = {"type" : "Link","token" : "TOKEN","src"  : "doc://alexa/apl/documents/GridList"},
+                        datasources = datasourcessp if is_spanish(handler_input) else datasources2)).response)
+        elif get_supported_interfaces(handler_input).alexa_presentation_apl is not None:
+            logger.info(f"output_right_directive audio {the_text}, {image_url}, {noise}, {noise_max} {noise_start}.")
+            return(handler_input.response_builder.ask(the_text).add_directive(  
+                  APLARenderDocumentDirective(
+                    token= "tok",
+                    document = {"type" : "Link", "src"  : doc},
+                    datasources = {"user": {"name": the_text},"crowd": {"noise": noise,"start": noise_start}
+                    }
+                )).response)
+        else:
+            card = StandardCard(title=_("Premier League"), text=strip_emotions(the_text), image=Image(small_image_url=image_url, large_image_url=image_url))
+            logger.info("Outputing StandardCard")
+            logger.info(f"output_right_directive audio {the_text}, {image_url}, {noise}, {noise_max} {noise_start}.")
+            return(handler_input.response_builder.set_card(card).ask(the_text).add_directive(
+                  APLARenderDocumentDirective(
+                    token= "tok",
+                    document = {"type" : "Link", "src"  : doc},
+                    datasources = {"user": {"name": the_text},"crowd": {"noise": noise,"start": noise_start}
+                    }
+                )).response)
+    except Exception as ex:
+        logger.info("error output_right_directive")
+        logger.error(ex)
+        traceback.print_exc()
+
+
+def return_random_noise():
+    x = randrange(0,7)
+    range_val =  randrange(30 * 1000)
+    logger.info(f"noise {noises[x]} starting at {range_val}")
+    return noises[x], range_val
+
 
 def set_session_start_time(handler_input):
     try:
@@ -276,57 +341,6 @@ def foul_handler(handler_input):
     image_url = "https://duy7y3nglgmh.cloudfront.net/Depositphotos_fouls.jpg"
     return output_right_directive(handler_input, speech, image_url, noise3, noise3_max_millis)
 
-
-def output_right_directive(handler_input, the_text, image_url, noise, noise_max):
-    _ = set_translation(handler_input)
-    logger.info("at output_right_directive")
-    set_session_start_time(handler_input)
-        
-    emit_locale_metric(handler_input)
-    session_attr = handler_input.attributes_manager.session_attributes
-    already_displayed_screen = session_attr.get("screen_displayed", False)
-    noise_start = str(randrange(0, noise_max))
-    the_text = wrap_language(handler_input, the_text)
-    
-    if get_supported_interfaces(handler_input).alexa_presentation_apl is not None and not already_displayed_screen:
-        session_attr["radioButtonText"] = "Form"
-        handler_input.attributes_manager.session_attributes = session_attr
-        this_profile = str(get_viewport_profile(handler_input.request_envelope))
-        item_heights = {"ViewportProfile.HUB_LANDSCAPE_SMALL": "75%", "ViewportProfile.HUB_LANDSCAPE_MEDIUM": "65%", "ViewportProfile.HUB_LANDSCAPE_LARGE": "55%"}
-        this_height = item_heights.get(this_profile, "")
-        datasources2["gridListData"]["listItemHeight"] = this_height
-        # if is_spanish(handler_input):
-        #     datasources2["gridListData"]["title"] = "Puedes preguntar sobre"
-
-        session_attr["screen_displayed"] = True
-        handler_input.attributes_manager.session_attributes = session_attr
-
-        logger.info(f"output_right_directive visual {the_text}")
-        return (handler_input.response_builder.speak(the_text).set_should_end_session(False)          
-                .add_directive( APLRenderDocumentDirective(
-                    token= "TOKEN",
-                    document = {"type" : "Link","token" : "TOKEN","src"  : "doc://alexa/apl/documents/GridList"},
-                    datasources = datasourcessp if is_spanish(handler_input) else datasources2)).response)
-    elif get_supported_interfaces(handler_input).alexa_presentation_apl is not None:
-        logger.info(f"output_right_directive audio {the_text}, {image_url}, {noise}, {noise_max} {noise_start}.")
-        return(handler_input.response_builder.ask(the_text).add_directive(  
-              APLARenderDocumentDirective(
-                token= "tok",
-                document = {"type" : "Link", "src"  : doc},
-                datasources = {"user": {"name": the_text},"crowd": {"noise": noise,"start": noise_start}
-                }
-            )).response)
-    else:
-        card = StandardCard(title=_("Premier League"), text=strip_emotions(the_text), image=Image(small_image_url=image_url, large_image_url=image_url))
-        logger.info("Outputing StandardCard")
-        logger.info(f"output_right_directive audio {the_text}, {image_url}, {noise}, {noise_max} {noise_start}.")
-        return(handler_input.response_builder.set_card(card).ask(the_text).add_directive(
-              APLARenderDocumentDirective(
-                token= "tok",
-                document = {"type" : "Link", "src"  : doc},
-                datasources = {"user": {"name": the_text},"crowd": {"noise": noise,"start": noise_start}
-                }
-            )).response)
         
 
 

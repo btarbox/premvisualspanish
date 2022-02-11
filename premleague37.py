@@ -49,7 +49,7 @@ lang_translations_en = gettext.translation('base', localedir='locales', language
 lang_translations_en.install()
 lang_translations_sp = gettext.translation('base', localedir='locales', languages=['es'])
 lang_translations_sp.install()
-from multimedia import results_visual
+from multimedia import results_visual, get_position_change_url
 from statshandlers import set_session_start_time
 from isp import skill_has_products, list_purchasable_products, buy_product, buy_response, refund_product, cancel_response
 from isp import ds2_advanced_or_not
@@ -86,6 +86,7 @@ class WelcomeHandler(AbstractRequestHandler):
         try:
             logger.info("the local is " + handler_input.request_envelope.request.locale + " " + str(is_spanish(handler_input)))
             _ =set_translation(handler_input)
+            get_position_change_url(handler_input)
             set_session_start_time(handler_input)
             my_products = skill_has_products(handler_input)
             local_ds2 = ds2_advanced_or_not(handler_input)
@@ -255,8 +256,10 @@ class StadiumHandler(AbstractRequestHandler):
             speech = "Sorry, we could not find that stadium"
         #speech = "in development"
         card_text = "in development"
+        image_url = "https://duy7y3nglgmh.cloudfront.net/stadium.png"
+        card = StandardCard(title=_("Stadium"), text=strip_emotions("Stadium"), image=Image(small_image_url=image_url, large_image_url=image_url))
         
-        handler_input.response_builder.speak(speech).ask(speech).set_card(SimpleCard("Stadium", card_text))
+        handler_input.response_builder.speak(speech).ask(speech).set_card(card)
         return handler_input.response_builder.response
 
 
@@ -516,9 +519,9 @@ class WhatDidIBuyHandler(AbstractRequestHandler):
         logger.info("In WhatDidIBuyHandler")
         purchased = skill_has_products(handler_input)
         if purchased is None:
-            speech = "You have no purchases"
+            speech = "You have no purchases. Say puchased advanced for a seven day trial. What can we tell you about Premier League?"
         else:
-            speech = "You have purchased Advanced Analytics charts"
+            speech = "You have purchased Advanced Analytics charts. What can we tell you about Premier League?"
         return output_right_directive(handler_input, speech, None, noise, noise_max_millis)
 
 
@@ -745,3 +748,4 @@ def finish(handler_input):
         )
         the_text =  wrap_language(handler_input, the_text)
         return(handler_input.response_builder.speak(the_text).set_should_end_session(True).response)
+

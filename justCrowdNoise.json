@@ -1,0 +1,34 @@
+{
+    "type": "APLA",
+    "version": "0.9",
+    "description": "This document demonstrates key components used to create audio responses.",
+    "compositions": {},
+    "resources": [],
+    "mainTemplate": {
+        "parameters": [
+            "payload"
+        ],
+        "item": {
+            "type": "Mixer",
+            "description": "The Mixer component plays a set of audio clips at the same time. See docs for more information.",
+            "items": [
+
+                {
+                    "type": "Audio",
+                    "description": "The Audio component plays the provided audio file; it stops when the speech ends.",
+                    "source": "${payload.crowd.noise}",
+                    "filter": [
+                        {
+                            "type": "Trim",
+                            "start": "${payload.crowd.start}"
+                        },
+                        {
+                            "type": "Volume",
+                            "amount": "25%"
+                        }
+                    ]
+                }
+            ]
+        }
+    }
+}
