@@ -20,7 +20,7 @@ import re
 import boto3
 import json
 import requests
-from shared import extra_cmd_prompts, doc, noise, noise2, noise3, noise_max_millis, results_table 
+from shared import extra_cmd_prompts, doc, noise, noise2, noise3, noise_max_millis, noises, results_table 
 from shared import noise2_max_millis, noise3_max_millis, datasources2, datasourcessp, test_speach_data, noise_data, teamsdatasource
 from datetime import datetime
 import spanishnumber
@@ -90,10 +90,78 @@ reload_main_table_as_needed
 load_main_table
 '''
 
+def output_right_directive(handler_input, the_text, image_url, noise, noise_max):
+    try:
+        _ = set_translation(handler_input)
+        loc = handler_input.request_envelope.request.locale
+        #logger.info("at output_right_directive")
+        set_session_start_time(handler_input)
+            
+        emit_locale_metric(handler_input)
+        session_attr = handler_input.attributes_manager.session_attributes
+        already_displayed_screen = session_attr.get("screen_displayed", False)
+        #noise_start = str(randrange(0, noise_max))
+        noise,noise_start = return_random_noise()
+        # noise = "https://duy7y3nglgmh.cloudfront.net/silent.mp3"
+        # noise_start = 0
+        the_text = wrap_language(handler_input, the_text)
+        
+        if get_supported_interfaces(handler_input).alexa_presentation_apl is not None and not already_displayed_screen:
+            session_attr["radioButtonText"] = "Form"
+            handler_input.attributes_manager.session_attributes = session_attr
+            this_profile = str(get_viewport_profile(handler_input.request_envelope))
+            item_heights = {"ViewportProfile.HUB_LANDSCAPE_SMALL": "75%", "ViewportProfile.HUB_LANDSCAPE_MEDIUM": "65%", "ViewportProfile.HUB_LANDSCAPE_LARGE": "55%"}
+            this_height = item_heights.get(this_profile, "")
+            datasources2["gridListData"]["listItemHeight"] = this_height
+            # if is_spanish(handler_input):
+            #     datasources2["gridListData"]["title"] = "Puedes preguntar sobre"
+    
+            session_attr["screen_displayed"] = True
+            handler_input.attributes_manager.session_attributes = session_attr
+    
+            logger.info(f"output_right_directive {loc} visual {the_text}")
+            return (handler_input.response_builder.speak(the_text).set_should_end_session(False)          
+                    .add_directive( APLRenderDocumentDirective(
+                        token= "TOKEN",
+                        document = {"type" : "Link","token" : "TOKEN","src"  : "doc://alexa/apl/documents/GridList"},
+                        datasources = datasourcessp if is_spanish(handler_input) else datasources2)).response)
+        elif get_supported_interfaces(handler_input).alexa_presentation_apl is not None:
+            logger.info(f"output_right_directive {loc} audio {the_text}, {image_url}, {noise}, {noise_max} {noise_start}.")
+            return(handler_input.response_builder.ask(the_text).add_directive(  
+                  APLARenderDocumentDirective(
+                    token= "tok",
+                    document = {"type" : "Link", "src"  : doc},
+                    datasources = {"user": {"name": the_text},"crowd": {"noise": noise,"start": noise_start}
+                    }
+                )).response)
+        else:
+            card = StandardCard(title=_("Premier League"), text=strip_emotions(the_text), image=Image(small_image_url=image_url, large_image_url=image_url))
+            logger.info("Outputing StandardCard")
+            logger.info(f"output_right_directive {loc} audio {the_text}, {image_url}, {noise}, {noise_max} {noise_start}.")
+            return(handler_input.response_builder.set_card(card).ask(the_text).add_directive(
+                  APLARenderDocumentDirective(
+                    token= "tok",
+                    document = {"type" : "Link", "src"  : doc},
+                    datasources = {"user": {"name": the_text},"crowd": {"noise": noise,"start": noise_start}
+                    }
+                )).response)
+    except Exception as ex:
+        logger.info("error output_right_directive")
+        logger.error(ex)
+        traceback.print_exc()
+
+
+def return_random_noise():
+    x = randrange(0,7)
+    range_val =  randrange(30 * 1000)
+    logger.info(f"noise {noises[x]} starting at {range_val}")
+    return noises[x], range_val
+
+
 def set_session_start_time(handler_input):
     try:
         if is_new_session(handler_input):
-            logger.info("at set_session_start_time")
+            #logger.info("at set_session_start_time")
             session_attr = handler_input.attributes_manager.session_attributes
             session_attr["session_start_time"] = datetime.timestamp(datetime.now())
             handler_input.attributes_manager.session_attributes = session_attr
@@ -197,9 +265,10 @@ def goal_hander(handler_input):
         speech = intro + speech + ',' + random_prompt(handler_input)
         
         image_url = "https://duy7y3nglgmh.cloudfront.net/Depositphotos_goal.jpg"
-        logger.info("about to call output_right_directive")
+        #logger.info("about to call output_right_directive")
         return output_right_directive(handler_input, speech, image_url, noise, noise_max_millis)
     except Exception as ex:
+        logger.info("exception at goal_hander")
         logger.error(ex)
         traceback.print_exc()
     
@@ -213,7 +282,7 @@ class ListTeamNamesHandler(AbstractRequestHandler):
 
     def handle(self, handler_input):
         _ = set_translation(handler_input)
-        logger.info("In ListTeamNamesHandler")
+        #logger.info("In ListTeamNamesHandler")
         team_name_phrases = [_("We recognize the following team names"),_("These are the teams in the best league in the world"),_("The best teams are")]
         intro = random_phrase(0,2, team_name_phrases)
         speech  = ',,Arsenal, Aston Villa, Brentford, Brighton and Hove Albion, Burnley, Chelsea, Crystal Palace,'
@@ -234,11 +303,11 @@ class CleanSheetsHandler(AbstractRequestHandler):
         return (is_intent_name("CleanSheetsIntent")(handler_input))
 
     def handle(self, handler_input):
-        logger.info("In CleanSheetsHandler")
+        #logger.info("In CleanSheetsHandler")
         return(cleansheets_handler(handler_input))
         
 def cleansheets_handler(handler_input):
-    logger.info("at actual cleansheets_handler")
+    #logger.info("at actual cleansheets_handler")
     _ = set_translation(handler_input)
     if "cleansheets" in extra_cmd_prompts:
         del extra_cmd_prompts["cleansheets"]
@@ -260,7 +329,7 @@ class FoulsHandler(AbstractRequestHandler):
         return (is_intent_name("FoulsIntent")(handler_input))
 
     def handle(self, handler_input):
-        logger.info("In FoulsHandler")
+        #logger.info("In FoulsHandler")
         return(foul_handler(handler_input))
         
 def foul_handler(handler_input):
@@ -276,57 +345,6 @@ def foul_handler(handler_input):
     image_url = "https://duy7y3nglgmh.cloudfront.net/Depositphotos_fouls.jpg"
     return output_right_directive(handler_input, speech, image_url, noise3, noise3_max_millis)
 
-
-def output_right_directive(handler_input, the_text, image_url, noise, noise_max):
-    _ = set_translation(handler_input)
-    logger.info("at output_right_directive")
-    set_session_start_time(handler_input)
-        
-    emit_locale_metric(handler_input)
-    session_attr = handler_input.attributes_manager.session_attributes
-    already_displayed_screen = session_attr.get("screen_displayed", False)
-    noise_start = str(randrange(0, noise_max))
-    the_text = wrap_language(handler_input, the_text)
-    
-    if get_supported_interfaces(handler_input).alexa_presentation_apl is not None and not already_displayed_screen:
-        session_attr["radioButtonText"] = "Form"
-        handler_input.attributes_manager.session_attributes = session_attr
-        this_profile = str(get_viewport_profile(handler_input.request_envelope))
-        item_heights = {"ViewportProfile.HUB_LANDSCAPE_SMALL": "75%", "ViewportProfile.HUB_LANDSCAPE_MEDIUM": "65%", "ViewportProfile.HUB_LANDSCAPE_LARGE": "55%"}
-        this_height = item_heights.get(this_profile, "")
-        datasources2["gridListData"]["listItemHeight"] = this_height
-        # if is_spanish(handler_input):
-        #     datasources2["gridListData"]["title"] = "Puedes preguntar sobre"
-
-        session_attr["screen_displayed"] = True
-        handler_input.attributes_manager.session_attributes = session_attr
-
-        logger.info(f"output_right_directive visual {the_text}")
-        return (handler_input.response_builder.speak(the_text).set_should_end_session(False)          
-                .add_directive( APLRenderDocumentDirective(
-                    token= "TOKEN",
-                    document = {"type" : "Link","token" : "TOKEN","src"  : "doc://alexa/apl/documents/GridList"},
-                    datasources = datasourcessp if is_spanish(handler_input) else datasources2)).response)
-    elif get_supported_interfaces(handler_input).alexa_presentation_apl is not None:
-        logger.info(f"output_right_directive audio {the_text}, {image_url}, {noise}, {noise_max} {noise_start}.")
-        return(handler_input.response_builder.ask(the_text).add_directive(  
-              APLARenderDocumentDirective(
-                token= "tok",
-                document = {"type" : "Link", "src"  : doc},
-                datasources = {"user": {"name": the_text},"crowd": {"noise": noise,"start": noise_start}
-                }
-            )).response)
-    else:
-        card = StandardCard(title=_("Premier League"), text=strip_emotions(the_text), image=Image(small_image_url=image_url, large_image_url=image_url))
-        logger.info("Outputing StandardCard")
-        logger.info(f"output_right_directive audio {the_text}, {image_url}, {noise}, {noise_max} {noise_start}.")
-        return(handler_input.response_builder.set_card(card).ask(the_text).add_directive(
-              APLARenderDocumentDirective(
-                token= "tok",
-                document = {"type" : "Link", "src"  : doc},
-                datasources = {"user": {"name": the_text},"crowd": {"noise": noise,"start": noise_start}
-                }
-            )).response)
         
 
 
@@ -338,7 +356,7 @@ class YellowCardHandler(AbstractRequestHandler):
         return (is_intent_name("YellowCardIntent")(handler_input))
 
     def handle(self, handler_input):
-        logger.info("In YellowCardHandler")
+        #logger.info("In YellowCardHandler")
         return(yellowcard_handler(handler_input))
         
 def yellowcard_handler(handler_input):
@@ -387,7 +405,7 @@ class TouchesHandler(AbstractRequestHandler):
         return (is_intent_name("TouchesIntent")(handler_input))
 
     def handle(self, handler_input):
-        logger.info("In TouchesHandler")
+        #logger.info("In TouchesHandler")
         return(touches_handler(handler_input))
         
 def touches_handler(handler_input):
@@ -411,7 +429,7 @@ class TacklesHandler(AbstractRequestHandler):
         return (is_intent_name("TacklesIntent")(handler_input))
 
     def handle(self, handler_input):
-        logger.info("In TacklesHandler")
+        #logger.info("In TacklesHandler")
         return(tackles_handler(handler_input))
         
 def tackles_handler(handler_input):    
@@ -437,7 +455,7 @@ class RefereesHandler(AbstractRequestHandler):
         return (is_intent_name("RefereesIntent")(handler_input))
 
     def handle(self, handler_input):
-        logger.info("In RefereesHandler")
+        #logger.info("In RefereesHandler")
         return(referees_handler(handler_input))
         
 def referees_handler(handler_input):
@@ -448,7 +466,7 @@ def referees_handler(handler_input):
     referees_phrases = [_("the most used referees are, "),_("the referees who've called the most games are, "),_("the referees in charge of the most games are,  ")]
     intro = random_phrase(0,2, referees_phrases)
     
-    speech, card_text = load_stats(5, "referees", " ", _(" yellow cards and "), _(" red cards"), 0, 3, 2)
+    speech, card_text = load_stats(5, "referees", " ", " " + _(" yellow cards and ") + " ", " " + _(" red cards"), 0, 3, 2)
     speech = intro + speech + ','
     speech = speech + random_prompt(handler_input)
     
@@ -464,7 +482,7 @@ class ResultsHandler(AbstractRequestHandler):
         return (is_intent_name("ResultsIntent")(handler_input))
 
     def handle(self, handler_input):
-        logger.info("In ResultsHandler")
+        #logger.info("In ResultsHandler")
         return(results_handler(handler_input))
 
         
@@ -499,7 +517,7 @@ class FixturesHandler(AbstractRequestHandler):
         return (is_intent_name("FixturesIntent")(handler_input))
 
     def handle(self, handler_input):
-        logger.info("In FixturesHandler")
+        #logger.info("In FixturesHandler")
         return(fixtures_handler(handler_input))
         
 def fixtures_handler(handler_input):    
@@ -551,7 +569,7 @@ class TableHandler(AbstractRequestHandler):
         return (is_intent_name("TableIntent")(handler_input))
 
     def handle(self, handler_input):
-        logger.info("In TableHandler")
+        #logger.info("In TableHandler")
         return(table_handler(handler_input))
         
 def table_handler(handler_input):    
@@ -577,7 +595,7 @@ class RelegationHandler(AbstractRequestHandler):
         return (is_intent_name("RelegationIntent")(handler_input))
 
     def handle(self, handler_input):
-        logger.info("In RelegationHandler")
+        #logger.info("In RelegationHandler")
         return(relegation_handler(handler_input))
 
         
@@ -596,7 +614,7 @@ def relegation_handler(handler_input):
 
 def build_team_speech(handler_input, this_team_index, team_name):
     _ = set_translation(handler_input)
-    logger.info(f"building team speak for {team_name} at index {this_team_index}")
+    #logger.info(f"building team speak for {team_name} at index {this_team_index}")
     speech = _("You asked about ") + team_name + _(", their form is ")
     form = say_place(this_team_index + 1, handler_input) + _(" with ") + pluralize(handler_input,table_data[this_team_index][WINS_INDEX], _("win"), 's') + ", "
     form = form + pluralize(handler_input,table_data[this_team_index][DRAWS_INDEX], _(" draw"), 's') + ", "
@@ -625,11 +643,13 @@ def team_handler(handler_input, team_id):
         slot = get_slot(handler_input, "plteam")
         if slot.resolutions is None:
             logger.info("no matching team found")
-            handler_input.response_builder.speak(_("Sorry, I could not find that team, please say a premier league team")).ask(_("Please try again"))
-            return handler_input.response_builder.response
+            # handler_input.response_builder.speak(_("Sorry, I could not find that team, please say a premier league team")).ask(_("Please try again"))
+            # return handler_input.response_builder.response
+            return output_right_directive(handler_input, _("Sorry, I could not find that team, please say a premier league team"), None, noise, noise_max_millis)
 
         dict = slot.resolutions.to_dict()
         success = dict['resolutions_per_authority'][0]["status"]["code"]
+        logger.info("at team_handler, success: " + success)
         if success == 'ER_SUCCESS_MATCH':
             team_id = dict['resolutions_per_authority'][0]["values"][0]["value"]["id"]
             team_name = dict['resolutions_per_authority'][0]["values"][0]["value"]["name"]
@@ -663,15 +683,15 @@ def team_handler(handler_input, team_id):
 
 
 def build_relegation_fragment(handler_input):
-    logger.info("at build_relegation_fragment")
+    #logger.info("at build_relegation_fragment")
     _ = set_translation(handler_input)
     reload_main_table_as_needed()
     logger.info("there are now {} teams in the table_data".format(len(table_data)))
     relegation_fragment = ""
     for index in range(17,20):
-        logger.info("index {}".format(index))
-        logger.info("name {}".format(table_data[index][NAME_INDEX]))
-        logger.info("points {}".format(pluralize(handler_input,table_data[index][POINTS_INDEX], 'point', 's')))
+        # logger.info("index {}".format(index))
+        # logger.info("name {}".format(table_data[index][NAME_INDEX]))
+        # logger.info("points {}".format(pluralize(handler_input,table_data[index][POINTS_INDEX], 'point', 's')))
         
         relegation_fragment = relegation_fragment + say_place(index+1, handler_input) + " " + table_data[index][NAME_INDEX] + _(" with ") + pluralize(handler_input,table_data[index][POINTS_INDEX], _(' point'), 's') + ', '
     return '<amazon:emotion name="disappointed" intensity="high">' + relegation_fragment + '</amazon:emotion>'
@@ -748,7 +768,7 @@ def say_place(table_index, handler_input):
     
 def reload_main_table_as_needed():
     if len(table_data) == 0:
-        logger.info("needed to reload main table")
+        #logger.info("needed to reload main table")
         load_main_table()
     else:
         logger.info("did not need to load main table")
@@ -756,11 +776,11 @@ def reload_main_table_as_needed():
         
 def load_main_table():
     s3 = boto3.client("s3")
-    logger.info("about to open main table")
+    #logger.info("about to open main table")
     resp = s3.get_object(Bucket="bpltables", Key="liveMainTable")
-    logger.info("back from open main table")
+    #logger.info("back from open main table")
     body_str = resp['Body'].read().decode("utf-8")
-    logger.info("converted streaming_body to string")
+    #logger.info("converted streaming_body to string")
     x = body_str.split("\n")
     team_index = 0
     #table_data.clear()
@@ -773,18 +793,18 @@ def load_main_table():
         if team_index > 19:
             break
     table_index = 0
-    logger.info("loaded {} teams into table_data".format(len(table_data)))
+    #logger.info("loaded {} teams into table_data".format(len(table_data)))
     
 
 champ_table = []
 
 def load_champ_table():
     s3 = boto3.client("s3")
-    logger.info("about to open chap table")
+    #logger.info("about to open chap table")
     resp = s3.get_object(Bucket="bpltables", Key="championship_table")
-    logger.info("back from open champ table")
+    #logger.info("back from open champ table")
     body_str = resp['Body'].read().decode("utf-8")
-    logger.info("converted streaming_body to string")
+    #logger.info("converted streaming_body to string")
     x = body_str.split("\n")
     team_index = 0
 
@@ -795,7 +815,7 @@ def load_champ_table():
         if team_index > 23:
             break
     table_index = 0
-    logger.info("loaded {} teams into champ_table".format(len(champ_table)))
+    #logger.info("loaded {} teams into champ_table".format(len(champ_table)))
 
 
 def random_phrase(low, high, phrases):
@@ -837,17 +857,20 @@ def suggest(handler_input):
     session_attr = handler_input.attributes_manager.session_attributes
     if session_attr.get("screen_displayed", False) == True:
         return ""
-    suggestions_left = len(extra_cmd_prompts)
-    logger.info("There are {} suggestions remaining".format(suggestions_left))
-    sugs = " "
-    if suggestions_left > 0:
-        key,value = random.choice(list(extra_cmd_prompts.items()))
-        #del extra_cmd_prompts[key]
-        logger.info("suggesting " + value)
-        return value
-    else:
-        load_suggestions(handler_input)    
-    return ""
+    load_suggestions(handler_input)
+    key,value = random.choice(list(extra_cmd_prompts.items()))
+    return value
+    # suggestions_left = len(extra_cmd_prompts)
+    # logger.info("There are {} suggestions remaining".format(suggestions_left))
+    # sugs = " "
+    # if suggestions_left > 0:
+    #     key,value = random.choice(list(extra_cmd_prompts.items()))
+    #     #del extra_cmd_prompts[key]
+    #     logger.info("suggesting " + value)
+    #     return value
+    # else:
+    #     load_suggestions(handler_input)    
+    # return ""
 
 
 def strip_emotions(str):
@@ -920,11 +943,11 @@ def load_stats(number, filename, article1, article2, article3, firstCol, secondC
     card_text = ""
     s3 = boto3.client("s3")
     bucket = "bpltables"
-    logger.info('try to open file ' + bucket + ":" + filename)
+    #logger.info('try to open file ' + bucket + ":" + filename)
     resp = s3.get_object(Bucket=bucket, Key=filename)
     body_str = resp['Body'].read().decode("utf-8")
-    logger.info("converted streaming_body to string")
-    logger.info(body_str)
+    #logger.info("converted streaming_body to string")
+    #logger.info(body_str)
     n = body_str.split("\n")
     oneCard = n[0].split(',')
     
@@ -935,13 +958,14 @@ def load_stats(number, filename, article1, article2, article3, firstCol, secondC
         say = say + ", " + new_text
         card_text = card_text + new_text + "\n"
         #logger.info("building at index {} {}".format(index, say))
+   # logger.info("load_stats returning " + say)
     return (say, strip_emotions(card_text))
 
 
 def load_combined_stats(number, filename, firstCol, secondCol, thirdCol):
     s3 = boto3.client("s3")
     bucket = "bpltables"
-    logger.info('try to open file ' + bucket + ":" + filename)
+    #logger.info('try to open file ' + bucket + ":" + filename)
     resp = s3.get_object(Bucket=bucket, Key=filename)
     body_str = resp['Body'].read().decode("utf-8")
     n = body_str.split("\n")
@@ -962,7 +986,7 @@ def load_combined_stats(number, filename, firstCol, secondCol, thirdCol):
 def load_two_stats(number, filename):
     s3 = boto3.client("s3")
     bucket = "bpltables"
-    logger.info('load_two_stats try to open file ' + bucket + ":" + filename)
+    #logger.info('load_two_stats try to open file ' + bucket + ":" + filename)
     try:
         resp = s3.get_object(Bucket=bucket, Key=filename)
         body_str = resp['Body'].read().decode("utf-8")
@@ -971,13 +995,13 @@ def load_two_stats(number, filename):
         names = []
         stat1 = []
         stat2 = []
-        logger.info(f"opened file {n} {oneCard}")
+        #logger.info(f"opened file {n} {oneCard}")
         for index in range(0,number):
             oneCard = n[index].split(',')
             names.append(oneCard[0])
             stat1.append(int(oneCard[1]))
             stat2.append(int(oneCard[2]))
-        logger.info("retrieved data")
+        #logger.info("retrieved data")
         return (names,stat1,stat2)
     except Exception as ex:
          logger.error(ex)
@@ -989,15 +1013,15 @@ def load_stats_ng(handler_input, number, filename, article1, article2, article3,
     card_text = ""
     s3 = boto3.client("s3")
     bucket = "bpltables"
-    logger.info('try to open file ' + bucket + ":" + filename)
+    #logger.info('try to open file ' + bucket + ":" + filename)
     resp = s3.get_object(Bucket=bucket, Key=filename)
     body_str = string_data = resp['Body'].read().decode("utf-8")
-    logger.info("converted streaming_body to string")
-    logger.info("load_stats_ng, lines_to_skip:" + str(lines_to_skip))
+    #logger.info("converted streaming_body to string")
+    #logger.info("load_stats_ng, lines_to_skip:" + str(lines_to_skip))
     #logger.info(body_str)
     n = body_str.split("\n")
     lines_in_file = len(n)
-    logger.info(f"there are {len(n)} items in the list")
+    #logger.info(f"there are {len(n)} items in the list")
     oneCard = n[0].split(',')
     date_lines = 0;
     index = 0
@@ -1009,22 +1033,33 @@ def load_stats_ng(handler_input, number, filename, article1, article2, article3,
         if oneCard[0] == 'date':
             index += 1
             date_lines += 1;
-            logger.info("increment index but don't increment lines to skip")
+            #logger.info("increment index but don't increment lines to skip")
         else:
             index += 1
             skip_index += 1
-            logger.info("we have seen one of the lines to skip")
+            #logger.info("we have seen one of the lines to skip")
 
     logger.info(f"index: {index} number:{number} date_lines: {date_lines} lines_to_skip: {lines_to_skip}")
     last_line_was_a_date = False
-    
+    only_one_team = team_to_match != ""
+    saved_date = ""
+
     try:
         while (index < (number + date_lines + lines_to_skip)) and (index < lines_in_file):
             oneCard = n[index].split(',')
+            logger.info(f"processing line {index}  {oneCard}")
             if oneCard[0] == 'date':
+                if only_one_team:
+                    saved_date = oneCard[1] if is_spanish(handler_input) else convert(oneCard[1])
+                    index += 1
+                    date_lines += 1;
+                    logger.info("saw a date, just remembering it")
+                    continue
                 if last_line_was_a_date == False:
-                    say += ' ' + oneCard[1] + ' '
+                    say_date = oneCard[1] if is_spanish(handler_input) else convert(oneCard[1])
+                    say += ' ' + say_date + ' '
                     last_line_was_a_date = True
+                    logger.info("saw a date " + say_date)
                 date_lines += 1;
             else:
                 third = oneCard[thirdCol] if thirdCol > -1 else ""
@@ -1033,8 +1068,9 @@ def load_stats_ng(handler_input, number, filename, article1, article2, article3,
                         x = third.split(":")
                         third =  get_tz_adjusted_time(handler_input, x[0], x[1])
                 except Exception as ex:
-                    logger.info("exception getting tz")
-                    logger.info(ex)
+                    #logger.info("exception getting tz")
+                    #logger.info(ex)
+                    pass
                 new_text = ""
                 try:
                     new_text = get_one_line(oneCard[firstCol], article1, oneCard[secondCol], article2, third, article3)
@@ -1043,23 +1079,67 @@ def load_stats_ng(handler_input, number, filename, article1, article2, article3,
                     logger.info(f"error calling get_one_line, {index}")
                     break
                 if team_matches(team_to_match, new_text):
+                    logger.info("found team match")
+                    if only_one_team:
+                        say += saved_date
                     say = say + ", " + new_text
                     card_text = card_text + new_text + "\n"
                     last_line_was_a_date = False
                 else:
                     date_lines += 1
+                    last_line_was_a_date = False
+                    #lines_to_skip += 1
             index += 1
     except:
         logging.info("RAN OFF END OF LIST OF FIXTURES OR RESULTS")
         #say += _(" that is the end of the list. ")
+    saved_say = say
     if is_spanish(handler_input):
+        say = say.replace("AM", "")
+        say = say.replace("PM", "")
+        say = say.replace("00", "")
         if has_screen(handler_input):
-            say = say.replace("oh clock", "00")
+            say = say.replace("oh clock", "")
         else:
             say = say.replace("oh clock", "")
+        #logger.info(f"was {saved_say} now is {say}")
     return (say, strip_emotions(card_text))            
 
 
+from time import strptime
+from datetime import date
+def str_to_date(date_str):
+    parts = date_str.split(" ")
+    day = int(parts[1])
+    month = strptime(parts[2],'%B').tm_mon
+    return month,day
+
+
+def special_date(today, fixture_date, not_special):
+    days_from_now = abs(fixture_date - today).days
+    if(days_from_now == 0):
+        logger.info(f"special_date1, {today} {fixture_date} {days_from_now}")
+        return "today  "
+    if(days_from_now == 1):
+        logger.info(f"special_date2, {today} {fixture_date} {days_from_now}")
+        return "tomorrow  "
+    if(days_from_now == 2):
+        logger.info(f"special_date3, {today} {fixture_date} {days_from_now}")
+        return "day after tomorrow"
+    return(not_special)
+
+
+def convert(date_str):
+    try:
+        month,day = str_to_date(date_str)
+        today = date.today()
+        fixture_date = date(today.year,month, day)
+        return special_date(today, fixture_date, date_str)
+    except Exception as ex:
+        logger.info("error output_right_directive")
+        logger.error(ex)
+        traceback.print_exc()
+    
 ''' adjust the input time to the already determined timezone '''
 def get_tz_adjusted_time(handler_input, local_hour, local_minute):
     session_attr = handler_input.attributes_manager.session_attributes
@@ -1073,7 +1153,7 @@ def get_tz_adjusted_time(handler_input, local_hour, local_minute):
     #userTimeZone = get_time_zone(handler_input)
     lambda_client = boto3.client("lambda")
     body = '{"hour":"' + str(local_hour) + '","minute":"' +  str(local_minute) +  '","dest_timezone":"' +  userTimeZone +  '"}'
-    logger.info("body is " + body)
+    #logger.info("body is " + body)
     resp = lambda_client.invoke(FunctionName="timezone", Payload=body)
     payload = resp['Payload'].read().decode("utf-8")
     jpay = json.loads(payload)
@@ -1132,16 +1212,17 @@ def find_team_index(team_id):
             return index
         if team[NAME_INDEX].upper().replace(" ", "") == team_id.upper():
             return index
-    logger.info(f"did not find {team_id} in {str(table_data)}")
+    #logger.info(f"did not find {team_id} in {str(table_data)}")
     return -1
 
     
 def team_results_or_fixtures(handler_input, team_name, results_or_fixtures):
     _ = set_translation(handler_input)
-    intro = _("recent results for {} were").format(team_name) if results_or_fixtures == "prevWeekFixtures" else _("upcoming fixtures for {} are").format(team_name)
-
+    logger.info("at team_results_or_fixtures")
+    intro = _("recent results for {} were").format(team_name) if results_or_fixtures == "prevWeekFixtures" else _("Upcoming fixtures for {} are").format(team_name)
+    
     speech, card_text = load_stats_ng(handler_input, 5, results_or_fixtures, "  ", "  ", "  ", 0, 2, 1, team_name)
-    speech = intro + speech + ',' + _("press a button")
+    speech = intro + " " + speech + ',' + _("press a button")
     card = SimpleCard("Results", card_text)
     if is_spanish(handler_input):
         str1 = speech.replace("beat", "vencer").replace("lost to", "perdió ante").replace("drew", "Empate").replace(" to ", " por ")
@@ -1151,6 +1232,7 @@ def team_results_or_fixtures(handler_input, team_name, results_or_fixtures):
 
     if get_supported_interfaces(handler_input).alexa_presentation_apl is not None:
         card = None
+    logger.info(f"output_right_directive {handler_input.request_envelope.request.locale} audio {speech}.")
     handler_input.response_builder.ask(speech).set_card(card).add_directive(
           APLARenderDocumentDirective(
             token= "tok",
@@ -1185,7 +1267,7 @@ def set_time_zone(handler_input):
         res = r.json()
         logger.info("Device API result: {}".format(str(res)))
         userTimeZone = res
-        logger.info("********** got TZ ***************")
+        #logger.info("********** got TZ ***************")
         # lambda_client = boto3.client("lambda")
         # body = '{"hour":"7","minute":"30","dest_timezone":"' + userTimeZone + '"}'
         # #logger.info("body is " + body)

@@ -6,7 +6,12 @@ extra_cmd_prompts = {}
 noise  = "https://duy7y3nglgmh.cloudfront.net/FootballCrowdSound.mp3"
 noise2 = "https://duy7y3nglgmh.cloudfront.net/SoccerStadiumSoundEffect.mp3"
 noise3 = "https://duy7y3nglgmh.cloudfront.net/SportsStadiumCrowdCheering.mp3"
-noise_max_millis = 4 * 60 * 1000
+noise4 = "https://duy7y3nglgmh.cloudfront.net/116351765-soccer-crowd-huge-stadium-chee.mp3"
+noise5 = "https://duy7y3nglgmh.cloudfront.net/027693942-soccer-stadium-crowd-chant-and.mp3"
+noise6 = "https://duy7y3nglgmh.cloudfront.net/032526273-soccer-stadium-crowd-chant-and.mp3"
+noise7 = "https://duy7y3nglgmh.cloudfront.net/043966652-football-stadium-ambience-socc.mp3"
+noises = [noise,noise2,noise3,noise4,noise5,noise6,noise7]
+noise_max_millis  = 4 * 60 * 1000
 noise2_max_millis = 40 * 1000
 noise3_max_millis = 40 * 1000
 doc = "doc://alexa/apla/documents/unchanged_template_from_tools"
@@ -1032,6 +1037,215 @@ other_leagues = {
     } 
 }
 
+statistics = {
+    "gridListData": {
+        "type": "object",
+        "objectId": "gridListSample",
+        "backgroundImage": {
+            "contentDescription": "this is the content",
+            "smallSourceUrl": "https://duy7y3nglgmh.cloudfront.net/football_pitch.png",
+            "largeSourceUrl": "https://duy7y3nglgmh.cloudfront.net/football_pitch.png",
+            "sources": [
+                {
+                    "url": "https://duy7y3nglgmh.cloudfront.net/football_pitch.png",
+                    "size": "small",
+                    "widthPixels": 0,
+                    "heightPixels": 0
+                },
+                {
+                    "url": "https://duy7y3nglgmh.cloudfront.net/football_pitch.png",
+                    "size": "large",
+                    "widthPixels": 0,
+                    "heightPixels": 0
+                }
+            ]
+        },
+        "title": "You can ask about ....",
+        "listItems": [
+            {
+                "primaryText": "Clean Sheets",
+                "imageSource": "https://duy7y3nglgmh.cloudfront.net/Depositphotos_keeper.jpg",
+                "primaryAction": [{"type": "SendEvent","arguments": ["cleansheet"]}]
+            },
+            {
+                "primaryText": "Fouls",
+                "imageSource": "https://duy7y3nglgmh.cloudfront.net/fouls.png",
+                "primaryAction": [{"type": "SendEvent","arguments": ["fouls"]}]
+            },
+            {
+                "primaryText": "Goals",
+                "imageSource": "https://duy7y3nglgmh.cloudfront.net/Depositphotos_goal.jpg",
+                "primaryAction": [{"type": "SendEvent","arguments": ["goals"]}]
+            },
+            {
+                "primaryText": "Red Card",
+                "imageSource": "https://duy7y3nglgmh.cloudfront.net/redcard.png",
+                "primaryAction": [{"type": "SendEvent","arguments": ["redcard"]}]
+            },
+            {
+                "primaryText": "Relegation",
+                "imageSource": "https://duy7y3nglgmh.cloudfront.net/relegation.png",
+                "primaryAction": [{"type": "SendEvent","arguments": ["relegation"]}]
+            },
+            {
+                "primaryText": "Tackles",
+                "imageSource": "https://duy7y3nglgmh.cloudfront.net/tackles.png",
+                "primaryAction": [{"type": "SendEvent","arguments": ["tackles"]}]
+            },
+            {
+                "primaryText": "Touches",
+                "imageSource": "https://duy7y3nglgmh.cloudfront.net/Depositphotos_touches.jpg",
+                "primaryAction": [{"type": "SendEvent","arguments": ["touches"]}]
+            },
+            {
+                "primaryText": "Yellow Card",
+                "imageSource": "https://duy7y3nglgmh.cloudfront.net/yellowcard.png",
+                "primaryAction": [{"type": "SendEvent","arguments": ["yellowcard"]}]
+            },
+            {
+                "primaryText": "",
+                "imageSource": "https://duy7y3nglgmh.cloudfront.net/back.png",
+                "primaryAction": [{"type": "SendEvent","arguments": ["goBack"]}]
+            }            
+        ]
+    }
+}
+
+basic_charts = {
+    "gridListData": {
+        "type": "object",
+        "objectId": "gridListSample",
+        "backgroundImage": {
+            "contentDescription": "this is the content",
+            "smallSourceUrl": "https://duy7y3nglgmh.cloudfront.net/football_pitch.png",
+            "largeSourceUrl": "https://duy7y3nglgmh.cloudfront.net/football_pitch.png",
+            "sources": [
+                {
+                    "url": "https://duy7y3nglgmh.cloudfront.net/football_pitch.png",
+                    "size": "small",
+                    "widthPixels": 0,
+                    "heightPixels": 0
+                },
+                {
+                    "url": "https://duy7y3nglgmh.cloudfront.net/football_pitch.png",
+                    "size": "large",
+                    "widthPixels": 0,
+                    "heightPixels": 0
+                }
+            ]
+        },
+        "title": "Basic Charts",
+        "listItems": [
+            {
+                "primaryText": "Points By Week",
+                "imageSource": "https://duy7y3nglgmh.cloudfront.net/linechart.png",
+                "primaryAction": [{"type": "SendEvent","arguments": ["line"]}]
+            },
+            {
+                "primaryText": "Goal Difference",
+                "imageSource": "https://duy7y3nglgmh.cloudfront.net/GoalDifference.png",
+                "primaryAction": [{"type": "SendEvent","arguments": ["goaldifference"]}]
+            },
+            {
+                "primaryText": "Keeper Saves vs Goals",
+                "imageSource": "https://duy7y3nglgmh.cloudfront.net/savepercent.png",
+                "primaryAction": [{"type": "SendEvent","arguments": ["savepercent"]}]
+            },
+            {
+                "primaryText": "Goals vs Shots",
+                "imageSource": "https://duy7y3nglgmh.cloudfront.net/goals_shots.png",
+                "primaryAction": [{"type": "SendEvent","arguments": ["goals_shots"]}]
+            },
+            {
+                "primaryText": "Referees",
+                "imageSource": "https://duy7y3nglgmh.cloudfront.net/Depositphotos_referee.jpg",
+                "primaryAction": [{"type": "SendEvent","arguments": ["referee"]}]
+            },
+            {
+                "primaryText": "",
+                "imageSource": "https://duy7y3nglgmh.cloudfront.net/back.png",
+                "primaryAction": [{"type": "SendEvent","arguments": ["goBack"]}]
+            }            
+            ]
+        }
+    }
+
+advanced_charts = {
+    "gridListData": {
+        "type": "object",
+        "objectId": "gridListSample",
+        "backgroundImage": {
+            "contentDescription": "this is the content",
+            "smallSourceUrl": "https://duy7y3nglgmh.cloudfront.net/football_pitch.png",
+            "largeSourceUrl": "https://duy7y3nglgmh.cloudfront.net/football_pitch.png",
+            "sources": [
+                {
+                    "url": "https://duy7y3nglgmh.cloudfront.net/football_pitch.png",
+                    "size": "small",
+                    "widthPixels": 0,
+                    "heightPixels": 0
+                },
+                {
+                    "url": "https://duy7y3nglgmh.cloudfront.net/football_pitch.png",
+                    "size": "large",
+                    "widthPixels": 0,
+                    "heightPixels": 0
+                }
+            ]
+        },
+        "title": "Advanced Analytics",
+        "listItems": [
+            {
+                "primaryText": "Attendance By Team",
+                "imageSource": "https://duy7y3nglgmh.cloudfront.net/attendance.png",
+                "primaryAction": [{"type": "SendEvent","arguments": ["attendance"]}]
+            },
+            {
+                "primaryText": "Possession By Team",
+                "imageSource": "https://duy7y3nglgmh.cloudfront.net/possession3.png",
+                "imageScpurchase advanced analyticsale": "best-fill",
+                "primaryAction": [{"type": "SendEvent","arguments": ["possession"]}]
+            },
+            {
+                "primaryText": "$ Goals In/Out Of Box",
+                "imageSource": "https://duy7y3nglgmh.cloudfront.net/long_shot.png",
+                "imageScale": "best-fill",
+                "primaryAction": [{"type": "SendEvent","arguments": ["in_out_box"]}]
+            },
+            {
+                "primaryText": "$ Corners By Team",
+                "imageSource": "https://duy7y3nglgmh.cloudfront.net/corners.png",
+                "imageScale": "best-fill",
+                "primaryAction": [{"type": "SendEvent","arguments": ["corners"]}]
+            },
+            {
+                "primaryText": "$ Offside",
+                "imageSource": "https://duy7y3nglgmh.cloudfront.net/offside2.png",
+                "imageScale": "best-fit",
+                "primaryAction": [{"type": "SendEvent","arguments": ["offside"]}]
+            },
+            {
+                "primaryText": "$ VAR Decisions",
+                "imageSource": "https://duy7y3nglgmh.cloudfront.net/var.png",
+                "imageScale": "best-fit",
+                "primaryAction": [{"type": "SendEvent","arguments": ["var"]}]
+            },
+            {
+                "primaryText": "$ Table Rank Changes",
+                "imageSource": "https://duy7y3nglgmh.cloudfront.net/rankchanges.png",
+                "imageScale": "best-fit",
+                "primaryAction": [{"type": "SendEvent","arguments": ["rankchanges"]}]
+            },
+            {
+                "primaryText": "",
+                "imageSource": "https://duy7y3nglgmh.cloudfront.net/back.png",
+                "primaryAction": [{"type": "SendEvent","arguments": ["goBack"]}]
+            }            
+            ]
+        }
+
+}
+
 datasources2 = {
     "gridListData": {
         "type": "object",
@@ -1063,16 +1277,6 @@ datasources2 = {
                 "primaryAction": [{"type": "SendEvent","arguments": ["table"]}]
             },
             {
-                "primaryText": "Advanced Analytics",
-                "imageSource": "https://duy7y3nglgmh.cloudfront.net/fremium.png",
-                "primaryAction": [{"type": "SendEvent","arguments": ["purchase"]}]
-            },
-            {
-                "primaryText": "Other League Tables",
-                "imageSource": "https://duy7y3nglgmh.cloudfront.net/other_tables.png",
-                "primaryAction": [{"type": "SendEvent","arguments": ["other_leagues"]}]
-            },
-            {
                 "primaryText": "Fixtures",
                 "imageSource": "https://duy7y3nglgmh.cloudfront.net/fixtures.png",
                 "primaryAction": [{"type": "SendEvent","arguments": ["fixtures"]}]
@@ -1088,105 +1292,131 @@ datasources2 = {
                 "primaryAction": [{"type": "SendEvent","arguments": ["teams"]}]
             },
             {
-                "primaryText": "Points By Week",
-                "imageSource": "https://duy7y3nglgmh.cloudfront.net/linechart.png",
-                "primaryAction": [{"type": "SendEvent","arguments": ["line"]}]
+                "primaryText": "Basic Charts",
+                "imageSource": "https://duy7y3nglgmh.cloudfront.net/Depositphotos_119312334_XL.jpg",
+                "primaryAction": [{"type": "SendEvent","arguments": ["basic_charts"]}]
             },
             {
-                "primaryText": "Attendance By Team",
-                "imageSource": "https://duy7y3nglgmh.cloudfront.net/attendance.png",
-                "primaryAction": [{"type": "SendEvent","arguments": ["attendance"]}]
+                "primaryText": "$ Advanced Charts",
+                "imageSource": "https://duy7y3nglgmh.cloudfront.net/Depositphotos_121024890_XL.jpg",
+                "primaryAction": [{"type": "SendEvent","arguments": ["advanced_charts"]}]
+            },
+
+            #     "primaryText": "Points By Week",
+            #     "imageSource": "https://duy7y3nglgmh.cloudfront.net/linechart.png",
+            #     "primaryAction": [{"type": "SendEvent","arguments": ["line"]}]
+            # },
+            # {
+            #     "primaryText": "$ Attendance By Team",
+            #     "imageSource": "https://duy7y3nglgmh.cloudfront.net/attendance.png",
+            #     "primaryAction": [{"type": "SendEvent","arguments": ["attendance"]}]
+            # },
+            # {
+            #     "primaryText": "$ Possession By Team",
+            #     "imageSource": "https://duy7y3nglgmh.cloudfront.net/possession3.png",
+            #     "imageScpurchase advanced analyticsale": "best-fill",
+            #     "primaryAction": [{"type": "SendEvent","arguments": ["possession"]}]
+            # },
+            # {
+            #     "primaryText": "$ Goals In/Out Of Box",
+            #     "imageSource": "https://duy7y3nglgmh.cloudfront.net/long_shot.png",
+            #     "imageScale": "best-fill",
+            #     "primaryAction": [{"type": "SendEvent","arguments": ["in_out_box"]}]
+            # },
+            # {
+            #     "primaryText": "$ Corners By Team",
+            #     "imageSource": "https://duy7y3nglgmh.cloudfront.net/corners.png",
+            #     "imageScale": "best-fill",
+            #     "primaryAction": [{"type": "SendEvent","arguments": ["corners"]}]
+            # },
+            # {
+            #     "primaryText": "$ Offside",
+            #     "imageSource": "https://duy7y3nglgmh.cloudfront.net/offside2.png",
+            #     "imageScale": "best-fit",
+            #     "primaryAction": [{"type": "SendEvent","arguments": ["offside"]}]
+            # },
+            # {
+            #     "primaryText": "$ VAR Decisions",
+            #     "imageSource": "https://duy7y3nglgmh.cloudfront.net/var.png",
+            #     "imageScale": "best-fit",
+            #     "primaryAction": [{"type": "SendEvent","arguments": ["var"]}]
+            # },
+            # {
+            #     "primaryText": "$ Table Rank Changes",
+            #     "imageSource": "https://duy7y3nglgmh.cloudfront.net/rankchanges.png",
+            #     "imageScale": "best-fit",
+            #     "primaryAction": [{"type": "SendEvent","arguments": ["rankchanges"]}]
+            # },
+            {
+                "primaryText": "Other League Tables",
+                "imageSource": "https://duy7y3nglgmh.cloudfront.net/other_tables.png",
+                "primaryAction": [{"type": "SendEvent","arguments": ["other_leagues"]}]
             },
             {
-                "primaryText": "Possession By Team",
-                "imageSource": "https://duy7y3nglgmh.cloudfront.net/possession3.png",
-                "imageScale": "best-fill",
-                "primaryAction": [{"type": "SendEvent","arguments": ["possession"]}]
+                "primaryText": "Statistics",
+                "imageSource": "https://duy7y3nglgmh.cloudfront.net/Depositphotos_119147050_XL.jpg",
+                "primaryAction": [{"type": "SendEvent","arguments": ["statistics"]}]
             },
-            {
-                "primaryText": "Goals In/Out Of Box",
-                "imageSource": "https://duy7y3nglgmh.cloudfront.net/long_shot.png",
-                "imageScale": "best-fill",
-                "primaryAction": [{"type": "SendEvent","arguments": ["in_out_box"]}]
-            },
-            {
-                "primaryText": "Corners By Team",
-                "imageSource": "https://duy7y3nglgmh.cloudfront.net/corners.png",
-                "imageScale": "best-fill",
-                "primaryAction": [{"type": "SendEvent","arguments": ["corners"]}]
-            },
-            {
-                "primaryText": "Offside",
-                "imageSource": "https://duy7y3nglgmh.cloudfront.net/offside2.png",
-                "imageScale": "best-fit",
-                "primaryAction": [{"type": "SendEvent","arguments": ["offside"]}]
-            },
-            {
-                "primaryText": "VAR Decisions",
-                "imageSource": "https://duy7y3nglgmh.cloudfront.net/var.png",
-                "imageScale": "best-fit",
-                "primaryAction": [{"type": "SendEvent","arguments": ["var"]}]
-            },
-            {
-                "primaryText": "Relegation",
-                "imageSource": "https://duy7y3nglgmh.cloudfront.net/relegation.png",
-                "primaryAction": [{"type": "SendEvent","arguments": ["relegation"]}]
-            },
-            {
-                "primaryText": "Clean Sheets",
-                "imageSource": "https://duy7y3nglgmh.cloudfront.net/Depositphotos_keeper.jpg",
-                "primaryAction": [{"type": "SendEvent","arguments": ["cleansheet"]}]
-            },
-            {
-                "primaryText": "Fouls",
-                "imageSource": "https://duy7y3nglgmh.cloudfront.net/fouls.png",
-                "primaryAction": [{"type": "SendEvent","arguments": ["fouls"]}]
-            },
-            {
-                "primaryText": "Goals",
-                "imageSource": "https://duy7y3nglgmh.cloudfront.net/Depositphotos_goal.jpg",
-                "primaryAction": [{"type": "SendEvent","arguments": ["goals"]}]
-            },
-            {
-                "primaryText": "Goal Difference",
-                "imageSource": "https://duy7y3nglgmh.cloudfront.net/GoalDifference.png",
-                "primaryAction": [{"type": "SendEvent","arguments": ["goaldifference"]}]
-            },
-            {
-                "primaryText": "Keeper Saves vs Goals",
-                "imageSource": "https://duy7y3nglgmh.cloudfront.net/savepercent.png",
-                "primaryAction": [{"type": "SendEvent","arguments": ["savepercent"]}]
-            },
-            {
-                "primaryText": "Goals vs Shots",
-                "imageSource": "https://duy7y3nglgmh.cloudfront.net/goals_shots.png",
-                "primaryAction": [{"type": "SendEvent","arguments": ["goals_shots"]}]
-            },
-            {
-                "primaryText": "Red Card",
-                "imageSource": "https://duy7y3nglgmh.cloudfront.net/redcard.png",
-                "primaryAction": [{"type": "SendEvent","arguments": ["redcard"]}]
-            },
-            {
-                "primaryText": "Referees",
-                "imageSource": "https://duy7y3nglgmh.cloudfront.net/Depositphotos_referee.jpg",
-                "primaryAction": [{"type": "SendEvent","arguments": ["referee"]}]
-            },
-            {
-                "primaryText": "Tackles",
-                "imageSource": "https://duy7y3nglgmh.cloudfront.net/tackles.png",
-                "primaryAction": [{"type": "SendEvent","arguments": ["tackles"]}]
-            },
-            {
-                "primaryText": "Touches",
-                "imageSource": "https://duy7y3nglgmh.cloudfront.net/Depositphotos_touches.jpg",
-                "primaryAction": [{"type": "SendEvent","arguments": ["touches"]}]
-            },
-            {
-                "primaryText": "Yellow Card",
-                "imageSource": "https://duy7y3nglgmh.cloudfront.net/yellowcard.png",
-                "primaryAction": [{"type": "SendEvent","arguments": ["yellowcard"]}]
-            },
+            #{
+            #     "primaryText": "Relegation",
+            #     "imageSource": "https://duy7y3nglgmh.cloudfront.net/relegation.png",
+            #     "primaryAction": [{"type": "SendEvent","arguments": ["relegation"]}]
+            # },
+            # {
+            #     "primaryText": "Clean Sheets",
+            #     "imageSource": "https://duy7y3nglgmh.cloudfront.net/Depositphotos_keeper.jpg",
+            #     "primaryAction": [{"type": "SendEvent","arguments": ["cleansheet"]}]
+            # },
+            # {
+            #     "primaryText": "Fouls",
+            #     "imageSource": "https://duy7y3nglgmh.cloudfront.net/fouls.png",
+            #     "primaryAction": [{"type": "SendEvent","arguments": ["fouls"]}]
+            # },
+            # {
+            #     "primaryText": "Goals",
+            #     "imageSource": "https://duy7y3nglgmh.cloudfront.net/Depositphotos_goal.jpg",
+            #     "primaryAction": [{"type": "SendEvent","arguments": ["goals"]}]
+            # },
+            # {
+            #     "primaryText": "Goal Difference",
+            #     "imageSource": "https://duy7y3nglgmh.cloudfront.net/GoalDifference.png",
+            #     "primaryAction": [{"type": "SendEvent","arguments": ["goaldifference"]}]
+            # },
+            # {
+            #     "primaryText": "Keeper Saves vs Goals",
+            #     "imageSource": "https://duy7y3nglgmh.cloudfront.net/savepercent.png",
+            #     "primaryAction": [{"type": "SendEvent","arguments": ["savepercent"]}]
+            # },
+            # {
+            #     "primaryText": "Goals vs Shots",
+            #     "imageSource": "https://duy7y3nglgmh.cloudfront.net/goals_shots.png",
+            #     "primaryAction": [{"type": "SendEvent","arguments": ["goals_shots"]}]
+            # },
+            # {
+            #     "primaryText": "Red Card",
+            #     "imageSource": "https://duy7y3nglgmh.cloudfront.net/redcard.png",
+            #     "primaryAction": [{"type": "SendEvent","arguments": ["redcard"]}]
+            # },
+            # {
+            #     "primaryText": "Referees",
+            #     "imageSource": "https://duy7y3nglgmh.cloudfront.net/Depositphotos_referee.jpg",
+            #     "primaryAction": [{"type": "SendEvent","arguments": ["referee"]}]
+            # },
+            # {
+            #     "primaryText": "Tackles",
+            #     "imageSource": "https://duy7y3nglgmh.cloudfront.net/tackles.png",
+            #     "primaryAction": [{"type": "SendEvent","arguments": ["tackles"]}]
+            # },
+            # {
+            #     "primaryText": "Touches",
+            #     "imageSource": "https://duy7y3nglgmh.cloudfront.net/Depositphotos_touches.jpg",
+            #     "primaryAction": [{"type": "SendEvent","arguments": ["touches"]}]
+            # },
+            # {
+            #     "primaryText": "Yellow Card",
+            #     "imageSource": "https://duy7y3nglgmh.cloudfront.net/yellowcard.png",
+            #     "primaryAction": [{"type": "SendEvent","arguments": ["yellowcard"]}]
+            # },
             {
                 "primaryText": "Leave a Review",
                 "imageScale": "best-fit",
@@ -1269,7 +1499,7 @@ datasourcessp = {
                 "primaryAction": [{"type": "SendEvent","arguments": ["fouls"]}]
             },
             {
-                "primaryText": "Metas",
+                "primaryText": "Goles",
                 "imageSource": "https://duy7y3nglgmh.cloudfront.net/Depositphotos_goal.jpg",
                 "primaryAction": [{"type": "SendEvent","arguments": ["goals"]}]
             },
@@ -1289,12 +1519,12 @@ datasourcessp = {
                 "primaryAction": [{"type": "SendEvent","arguments": ["goals_shots"]}]
             },
             {
-                "primaryText": "La tarjeta roja",
+                "primaryText": "Tarjetas rojas",
                 "imageSource": "https://duy7y3nglgmh.cloudfront.net/redcard.png",
                 "primaryAction": [{"type": "SendEvent","arguments": ["redcard"]}]
             },
             {
-                "primaryText": "Arbitrar",
+                "primaryText": "Arbitros",
                 "imageSource": "https://duy7y3nglgmh.cloudfront.net/Depositphotos_referee.jpg",
                 "primaryAction": [{"type": "SendEvent","arguments": ["referee"]}]
             },
@@ -1304,7 +1534,7 @@ datasourcessp = {
                 "primaryAction": [{"type": "SendEvent","arguments": ["tackles"]}]
             },
             {
-                "primaryText": "Toca",
+                "primaryText": "Toques",
                 "imageSource": "https://duy7y3nglgmh.cloudfront.net/Depositphotos_touches.jpg",
                 "primaryAction": [{"type": "SendEvent","arguments": ["touches"]}]
             },
